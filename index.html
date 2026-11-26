@@ -1,23 +1,336 @@
-<!-- ... existing code ... -->
-                    <p class="text-white/90 text-sm sm:text-base font-light leading-relaxed mb-7 max-w-lg">
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noantawee Social Brief</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        .font-serif-display {
+            font-family: 'Cinzel', serif;
+        }
+        .custom-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #ffffff;
+            border-radius: 10px;
+        }
+        .btn-create-brief {
+            clip-path: polygon(0 0, 100% 0, 93% 100%, 0% 100%);
+            border-top-left-radius: 9999px;
+            border-bottom-left-radius: 9999px;
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #pdf-document-sheet, #pdf-document-sheet * {
+                visibility: visible;
+            }
+            #pdf-document-sheet {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-[#0e2138] text-white min-h-screen">
+
+    <!-- Toast Notification -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 no-print">
+        <div class="bg-white text-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+            <h3 class="text-lg font-bold text-slate-900 mb-2">ยืนยันการลบบรีฟ</h3>
+            <p class="text-sm text-slate-600 mb-6">คุณต้องการลบบรีฟงานนี้ใช่หรือไม่? ข้อมูลจะถูกลบออกจากระบบถาวร</p>
+            <div class="flex justify-end gap-2">
+                <button id="confirm-cancel-btn" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">ยกเลิก</button>
+                <button id="confirm-ok-btn" class="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 text-white hover:bg-rose-700">ลบบรีฟนี้</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PAGE 1: HOME / LANDING ==================== -->
+    <section id="page-home" class="relative w-full min-h-screen flex items-center bg-[#0e2138] bg-cover bg-center bg-no-repeat" style="background-image: url('bg.png');">
+        <div class="absolute inset-0 bg-gradient-to-r from-[#132c4a] via-[#132b47]/80 to-[#0c1d33] -z-10"></div>
+
+        <!-- 50/50 Grid Layout -->
+        <div class="w-full h-full min-h-screen grid grid-cols-1 lg:grid-cols-2">
+            
+            <!-- Left 50%: Empty space for 1920x1080 house background -->
+            <div class="hidden lg:block w-full h-full"></div>
+
+            <!-- Right 50%: Controls & Lists -->
+            <div class="w-full min-h-screen flex flex-col justify-center px-6 sm:px-12 lg:pl-6 lg:pr-16 py-12 bg-[#0c1d33]/75 lg:bg-transparent backdrop-blur-sm lg:backdrop-blur-none">
+                <div class="max-w-xl w-full">
+                    
+                    <!-- Row 1: Logo / Brand Name -->
+                    <div class="mb-2">
+                        <img id="brand-logo-img" src="logo.png" alt="Noantawee Social Brief" class="max-h-28 object-contain hidden" onload="this.classList.remove('hidden'); document.getElementById('brand-text-fallback').classList.add('hidden');" onerror="this.classList.add('hidden');" />
+                        <div id="brand-text-fallback">
+                            <h1 class="font-serif-display text-4xl sm:text-5xl xl:text-6xl font-bold tracking-wider text-white leading-none">
+                                NOANTAWEE
+                            </h1>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Create Brief Button + SOCIAL BRIEF -->
+                    <div class="flex flex-wrap items-center gap-4 mb-5">
+                        <button onclick="openBriefEditor()" class="btn-create-brief bg-white hover:bg-sky-50 text-[#0e2138] font-bold text-xl sm:text-2xl px-7 pr-10 py-2.5 shadow-lg transition transform hover:scale-[1.02] active:scale-95 cursor-pointer">
+                            สร้างบรีฟ
+                        </button>
+                        <span class="font-serif-display text-3xl sm:text-4xl xl:text-5xl font-semibold tracking-wide text-white">
+                            SOCIAL BRIEF
+                        </span>
+                    </div>
+
+                    <!-- Row 3: Description -->
+                    <p class="text-white/90 text-sm sm:text-base font-light leading-relaxed mb-6 max-w-lg">
                         พื้นที่สำหรับการสร้าง Brief โซเชียลมีเดีย ปรับแต่งให้ง่ายต่อการทำงานและอัปเดตงานในระบบ และปรับแก้ได้ตามที่ต้องการ ตอนนี้เป็นเวอร์ชัน V.0.1 ใช้ไปก่อนครับแง่ง ๆ
                     </p>
 
-                    <!-- แถบสถานะการเชื่อมต่อ Firebase -->
+                    <!-- Firebase Sync Status -->
                     <div class="flex items-center gap-2 mb-4 text-xs">
                         <span id="firebase-sync-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
                         <span id="firebase-sync-text" class="text-white/80">กำลังเชื่อมต่อฐานข้อมูล ntwbrief...</span>
                     </div>
 
-                    <!-- แถวที่ 4: คอลัมน์ Update Brief และ Job Done -->
-<!-- ... existing code ... -->
+                    <!-- Row 4: Two Columns (Update Brief & Job Done) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-3 border-t border-white/15">
+                        
+                        <!-- Update Brief -->
+                        <div>
+                            <h2 class="text-white font-semibold text-base sm:text-lg mb-3 tracking-wide flex items-center justify-between">
+                                <span>Update Brief</span>
+                                <span id="count-pending" class="text-xs font-normal bg-white/15 px-2 py-0.5 rounded-full">0</span>
+                            </h2>
+                            <div id="list-update-brief" class="custom-scroll max-h-48 overflow-y-auto pr-2 space-y-2">
+                                <p class="text-xs text-white/50">กำลังโหลดข้อมูล...</p>
+                            </div>
+                        </div>
+
+                        <!-- Job Done -->
+                        <div>
+                            <h2 class="text-white font-semibold text-base sm:text-lg mb-3 tracking-wide flex items-center justify-between">
+                                <span>Job Done</span>
+                                <span id="count-done" class="text-xs font-normal bg-emerald-400/20 text-emerald-200 px-2 py-0.5 rounded-full">0</span>
+                            </h2>
+                            <div id="list-job-done" class="custom-scroll max-h-48 overflow-y-auto pr-2 space-y-2">
+                                <p class="text-xs text-white/50">กำลังโหลดข้อมูล...</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE 2: BRIEF EDITOR ==================== -->
+    <section id="page-editor" class="hidden min-h-screen bg-slate-100 text-slate-800 pb-16">
+        <div class="bg-[#0e2138] text-white px-6 py-4 shadow-md sticky top-0 z-30 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button onclick="switchPage('home')" class="bg-white/10 hover:bg-white/20 px-3.5 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer">
+                    ← กลับหน้าหลัก
+                </button>
+                <h2 class="font-semibold text-lg">สร้าง / แก้ไขบรีฟงาน</h2>
+            </div>
+            <button onclick="handleSaveBrief()" id="btn-save-brief" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2 rounded-lg text-sm shadow transition cursor-pointer">
+                บันทึกบรีฟเข้าระบบ
+            </button>
+        </div>
+
+        <div class="max-w-4xl mx-auto mt-8 px-4">
+            <input type="hidden" id="edit-brief-id" value="" />
+
+            <!-- Tab Switcher: Video vs Image -->
+            <div class="bg-white p-1.5 rounded-xl shadow-sm border border-slate-200 inline-flex mb-6">
+                <button id="tab-btn-video" onclick="switchEditorTab('Video')" class="px-6 py-2.5 rounded-lg text-sm font-semibold transition bg-[#0e2138] text-white cursor-pointer">
+                    🎬 บรีฟวิดีโอ (Video Brief)
+                </button>
+                <button id="tab-btn-image" onclick="switchEditorTab('Image')" class="px-6 py-2.5 rounded-lg text-sm font-semibold transition text-slate-600 hover:bg-slate-100 cursor-pointer">
+                    🖼️ บรีฟภาพนิ่ง (Image Brief)
+                </button>
+            </div>
+
+            <!-- VIDEO BRIEF FORM -->
+            <div id="editor-video-section" class="space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-base text-[#0e2138] mb-4 border-b pb-2">1. ข้อมูลโปรเจกต์ (วิดีโอ)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อโครงการบ้าน</label>
+                            <input type="text" id="vid-project-name" value="นนทวี" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#0e2138] outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อคลิป / หัวข้อคอนเทนต์</label>
+                            <input type="text" id="vid-title" placeholder="เช่น รีวิวบ้านแฝดสไตล์โมเดิร์น" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#0e2138] outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">วันที่อัปเดต (วว/ดด/ปป)</label>
+                            <input type="text" id="vid-date" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#0e2138] outline-none" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Specs (No Resolution field) -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-base text-[#0e2138] mb-4 border-b pb-2">2. สเปกวิดีโอ</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">สัดส่วนภาพ (Aspect Ratio)</label>
+                            <select id="vid-ratio" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white">
+                                <option value="9:16 (Reels / TikTok / Shorts)">9:16 (Reels / TikTok / Shorts)</option>
+                                <option value="16:9 (YouTube / Facebook)">16:9 (YouTube / Facebook)</option>
+                                <option value="1:1 (Square Post)">1:1 (Square Post)</option>
+                                <option value="4:5 (Portrait Feed)">4:5 (Portrait Feed)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">ความยาวโดยประมาณ</label>
+                            <input type="text" id="vid-duration" placeholder="เช่น 30 - 45 วินาที" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">ลิงก์ฟุตเทจ / Reference</label>
+                            <input type="text" id="vid-ref" placeholder="วางลิงก์ Google Drive หรือตัวอย่างงาน" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mood & Funnel (TOFU / MOFU / BOFU) -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-base text-[#0e2138] mb-3 border-b pb-2">3. สไตล์ อารมณ์ และ Funnel (TOFU / MOFU / BOFU)</h3>
+                    <div id="mood-tags-container" class="flex flex-wrap gap-2 mb-3"></div>
+                    <input type="text" id="vid-custom-mood" placeholder="รายละเอียดสไตล์เพิ่มเติม เช่น ตัดต่อกระชับ โทนสีอบอุ่น..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+                </div>
+
+                <!-- Storyboard starting with HOOK -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-4 border-b pb-2">
+                        <h3 class="font-semibold text-base text-[#0e2138]">4. ลำดับภาพและบทพูด (เริ่มจาก HOOK)</h3>
+                        <button type="button" onclick="addSceneRow()" class="bg-[#0e2138] hover:bg-slate-800 text-white text-xs px-3.5 py-1.5 rounded-lg font-medium cursor-pointer">
+                            + เพิ่มฉากถัดไป
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-b">
+                                    <th class="p-2.5 w-28">ช่วง / ฉาก</th>
+                                    <th class="p-2.5">ภาพที่เห็น (Visual / Footage)</th>
+                                    <th class="p-2.5">ข้อความขึ้นจอ / เสียงพากย์ (Text / VO)</th>
+                                    <th class="p-2.5 w-12 text-center">ลบ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scene-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IMAGE BRIEF FORM -->
+            <div id="editor-image-section" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-base text-[#0e2138] mb-4 border-b pb-2">ข้อมูลโปรเจกต์ (ภาพนิ่ง)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อโครงการบ้าน</label>
+                            <input type="text" id="img-project-name" value="นนทวี" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">หัวข้อภาพ / แคมเปญ</label>
+                            <input type="text" id="img-title" placeholder="เช่น โปรโมชันจองบ้านเดือนนี้" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Resolution ของภาพ</label>
+                            <input type="text" id="img-resolution" placeholder="เช่น 1080x1350 px หรือ 1920x1080 px" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">วันที่อัปเดต (วว/ดด/ปป)</label>
+                            <input type="text" id="img-date" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">รายละเอียดบรีฟและข้อความในภาพ (Brief & Copy)</label>
+                            <textarea id="img-brief-detail" rows="4" placeholder="ระบุข้อความพาดหัว รายละเอียดโปรโมชัน โทนสี หรือสิ่งที่ต้องการเน้นในภาพ..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none"></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">ลิงก์ฟุตเทจ / รูปภาพต้นฉบับ (Footage)</label>
+                                <input type="text" id="img-footage" placeholder="วางลิงก์โฟลเดอร์รูปบ้าน / โลโก้" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">ลิงก์ตัวอย่างงาน (Reference)</label>
+                                <input type="text" id="img-reference" placeholder="วางลิงก์ภาพตัวอย่างแนวทางดีไซน์" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE 3: IN-PAGE PDF VIEWER ==================== -->
+    <section id="page-pdf-viewer" class="hidden min-h-screen bg-slate-800 text-slate-900 pb-16">
+        <div class="no-print bg-[#0e2138] text-white px-6 py-3.5 shadow-md sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <button onclick="switchPage('home')" class="bg-white/10 hover:bg-white/20 px-3.5 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer">
+                    ← กลับหน้าหลัก
+                </button>
+                <span class="text-sm text-white/80 hidden sm:inline">พรีวิวเอกสารบรีฟ (PDF View)</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button id="btn-toggle-status" onclick="toggleActiveBriefStatus()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer">
+                    ✓ ย้ายไป Job Done
+                </button>
+                <button onclick="editActiveBrief()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer">
+                    แก้ไขบรีฟนี้
+                </button>
+                <button onclick="window.print()" class="bg-white text-[#0e2138] hover:bg-slate-100 px-4 py-1.5 rounded-lg text-sm font-semibold transition cursor-pointer">
+                    พิมพ์ / เซฟ PDF
+                </button>
+                <button onclick="requestDeleteActiveBrief()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer">
+                    ลบ
+                </button>
+            </div>
+        </div>
+
+        <div class="px-4 pt-8">
+            <div id="pdf-document-sheet" class="max-w-[210mm] min-h-[297mm] mx-auto bg-white shadow-2xl p-8 sm:p-12 rounded-sm"></div>
+        </div>
+    </section>
+
+    <!-- ==================== FIREBASE & APP SCRIPT ==================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        // =========================================================================
-        // 1. FIREBASE CONFIGURATION (โปรเจกต์ ntwbrief)
-        // =========================================================================
+        // Firebase Configuration (ntwbrief)
         const firebaseConfig = {
             apiKey: "AIzaSyArw6MtTWTreAlJxmC01_4MQUSCVUvdD8o",
             authDomain: "ntwbrief.firebaseapp.com",
@@ -32,74 +345,39 @@
         const db = getFirestore(app);
         const BRIEFS_COLLECTION = "briefs";
 
-        // =========================================================================
-        // 2. CONSTANTS & GLOBAL STATE
-        // =========================================================================
-        const STORAGE_KEY = 'noantawee_social_briefs_v1';
-        const CUSTOM_BG_KEY = 'noantawee_custom_bg_v1';
-        const CUSTOM_LOGO_KEY = 'noantawee_custom_logo_v1';
-
-        const FUNNEL_TAGS = ['TOFU', 'MOFU', 'BOFU'];
-        const MOOD_TAGS = [
-            'อบอุ่น / ครอบครัว',
-            'หรูหรา / พรีเมียม',
-            'ทันสมัย / โมเดิร์น',
-            'กระชับ / ฉับไว',
-            'เล่าเรื่อง / รีวิวจริง',
-            'โปรโมชัน / กระตุ้นยอด'
+        const MOOD_OPTIONS = [
+            "TOFU", "MOFU", "BOFU",
+            "อบอุ่น / ครอบครัว", "หรูหรา / พรีเมียม", "ทันสมัย / โมเดิร์น",
+            "กระชับ / ฉับไว", "เล่าเรื่อง / รีวิวจริง", "โปรโมชัน / กระตุ้นยอด"
         ];
 
         let briefs = [];
         let activeBriefId = null;
         let currentEditorType = 'Video';
-        let isFirebaseReady = false;
+        let selectedMoods = ['TOFU'];
 
-        // ข้อมูลตัวอย่างเริ่มต้นเมื่อเปิดใช้งานครั้งแรก
-        const DEFAULT_SAMPLE_BRIEFS = [
-            {
-                id: 'ntw-demo-1',
-                type: 'Video',
-                title: 'พาทัวร์บ้านเดี่ยวโซนใหม่ สไตล์โมเดิร์น',
-                projectName: 'นนทวี',
-                date: new Date().toISOString().split('T')[0],
-                status: 'pending',
-                duration: '30 - 60 วินาที (Short Video)',
-                ratio: '9:16 (แนวตั้ง - TikTok / Reels / Shorts)',
-                funnels: ['TOFU'],
-                moods: ['อบอุ่น / ครอบครัว', 'ทันสมัย / โมเดิร์น'],
-                customMood: 'ตัดต่อกระชับ โทนสีสว่างอบอุ่น',
-                hook: {
-                    timecode: '00:00 - 00:03',
-                    visual: 'มุมโดรนเปิดหน้าโครงการพร้อมแสงเช้า แล้วตัดเข้าช็อตเปิดประตูบ้าน',
-                    audio: 'งบ 4 ล้านต้นๆ ได้บ้านเดี่ยวพื้นที่กว้างขนาดนี้เลยเหรอ?'
-                },
-                shots: [
-                    {
-                        timecode: '00:03 - 00:15',
-                        visual: 'เดินชมโถงรับแขกโชว์เพดานสูงและแสงธรรมชาติ',
-                        audio: 'พามาดูโซนรับแขกที่เชื่อมต่อกับพื้นที่ทานข้าว โปร่งโล่งไม่อึดอัด'
-                    },
-                    {
-                        timecode: '00:15 - 00:30',
-                        visual: 'พาขึ้นชั้น 2 ชมห้องนอน Master Bedroom',
-                        audio: 'ห้องนอนใหญ่พร้อมพื้นที่ Walk-in Closet ลงตัวสำหรับครอบครัวเริ่มต้น'
+        // Real-time Firestore Listener
+        function initFirestoreListener() {
+            try {
+                const q = query(collection(db, BRIEFS_COLLECTION), orderBy("createdAt", "desc"));
+                onSnapshot(q, (snapshot) => {
+                    briefs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    updateSyncStatus("เชื่อมต่อฐานข้อมูลออนไลน์แล้ว (ซิงก์ทุกเครื่อง)", "bg-emerald-400");
+                    renderHomeLists();
+
+                    if (activeBriefId && !document.getElementById('page-pdf-viewer').classList.contains('hidden')) {
+                        renderPdfPreview(activeBriefId);
                     }
-                ],
-                footage: 'https://drive.google.com/',
-                reference: '',
-                notes: 'วางโลโก้โครงการนนทวีมุมขวาบนตลอดคลิป',
-                createdAt: Date.now()
+                }, (error) => {
+                    console.error("Firestore error:", error);
+                    updateSyncStatus("เชื่อมต่อฐานข้อมูลขัดข้อง (ตรวจสอบ Firestore Rules)", "bg-rose-500");
+                    renderHomeLists();
+                });
+            } catch (e) {
+                console.error("Firebase init error:", e);
+                updateSyncStatus("ไม่สามารถเชื่อมต่อฐานข้อมูลได้", "bg-rose-500");
             }
-        ];
-
-        // =========================================================================
-        // 3. INITIALIZATION & REAL-TIME FIRESTORE SYNC
-        // =========================================================================
-        document.addEventListener('DOMContentLoaded', () => {
-            loadCustomAssets();
-            initFirestoreListener();
-            lucide.createIcons();
-        });
+        }
 
         function updateSyncStatus(text, colorClass) {
             const dot = document.getElementById('firebase-sync-dot');
@@ -108,70 +386,454 @@
             if (label) label.textContent = text;
         }
 
-        function initFirestoreListener() {
-            try {
-                const q = query(collection(db, BRIEFS_COLLECTION), orderBy("createdAt", "desc"));
-                onSnapshot(q, (snapshot) => {
-                    isFirebaseReady = true;
-                    briefs = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-                    updateSyncStatus("เชื่อมต่อฐานข้อมูลออนไลน์แล้ว (ซิงก์ทุกเครื่อง)", "bg-emerald-400");
-                    renderHomeLists();
+        function getTodayShortDate() {
+            const d = new Date();
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yy = String(d.getFullYear()).slice(-2);
+            return `${dd}/${mm}/${yy}`;
+        }
 
-                    // หากกำลังเปิดดู PDF ของบรีฟใดอยู่ ให้รีเฟรชข้อมูลอัตโนมัติ
-                    if (activeBriefId && !document.getElementById('page-pdf-viewer').classList.contains('hidden')) {
-                        renderPdfPreview(activeBriefId);
-                    }
-                }, (error) => {
-                    console.error("Firestore error:", error);
-                    updateSyncStatus("รอเปิดใช้งาน Firestore Database (ใช้โหมดสำรองชั่วคราว)", "bg-rose-400");
-                    loadBriefsFromLocalFallback();
+        // Render Home Columns
+        function renderHomeLists() {
+            const pendingContainer = document.getElementById('list-update-brief');
+            const doneContainer = document.getElementById('list-job-done');
+
+            const pendingItems = briefs.filter(b => b.status !== 'done');
+            const doneItems = briefs.filter(b => b.status === 'done');
+
+            document.getElementById('count-pending').textContent = pendingItems.length;
+            document.getElementById('count-done').textContent = doneItems.length;
+
+            pendingContainer.innerHTML = pendingItems.length === 0
+                ? `<p class="text-xs text-white/50 italic">ยังไม่มีรายการอัปเดต</p>`
+                : pendingItems.map(item => `
+                    <div class="flex items-center justify-between bg-white/10 hover:bg-white/15 px-3 py-2 rounded transition">
+                        <div class="truncate pr-2">
+                            <span class="text-sm font-medium text-white">${escapeHTML(item.date)} ${escapeHTML(item.type)}</span>
+                            <span class="block text-xs text-white/70 truncate">${escapeHTML(item.projectName)} - ${escapeHTML(item.title || 'ไม่มีหัวข้อ')}</span>
+                        </div>
+                        <button onclick="openPdfViewer('${item.id}')" title="เปิดอ่านบรีฟ" class="w-6 h-6 shrink-0 bg-white text-[#0e2138] hover:bg-sky-100 font-bold rounded flex items-center justify-center text-base leading-none shadow cursor-pointer">
+                            +
+                        </button>
+                    </div>
+                `).join('');
+
+            doneContainer.innerHTML = doneItems.length === 0
+                ? `<p class="text-xs text-white/50 italic">ยังไม่มีงานที่เสร็จสิ้น</p>`
+                : doneItems.map(item => `
+                    <div class="flex items-center justify-between bg-white/10 hover:bg-white/15 px-3 py-2 rounded transition">
+                        <div class="truncate pr-2">
+                            <span class="text-sm font-medium text-emerald-200">${escapeHTML(item.date)} ${escapeHTML(item.type)}</span>
+                            <span class="block text-xs text-white/70 truncate">${escapeHTML(item.projectName)} - ${escapeHTML(item.title || 'ไม่มีหัวข้อ')}</span>
+                        </div>
+                        <button onclick="openPdfViewer('${item.id}')" title="เปิดอ่านบรีฟ" class="w-6 h-6 shrink-0 bg-white text-[#0e2138] hover:bg-sky-100 font-bold rounded flex items-center justify-center text-base leading-none shadow cursor-pointer">
+                            +
+                        </button>
+                    </div>
+                `).join('');
+        }
+
+        // Page Navigation
+        window.switchPage = function(pageName) {
+            document.getElementById('page-home').classList.add('hidden');
+            document.getElementById('page-editor').classList.add('hidden');
+            document.getElementById('page-pdf-viewer').classList.add('hidden');
+            document.getElementById(`page-${pageName}`).classList.remove('hidden');
+            window.scrollTo(0, 0);
+        };
+
+        window.switchEditorTab = function(type) {
+            currentEditorType = type;
+            const btnVid = document.getElementById('tab-btn-video');
+            const btnImg = document.getElementById('tab-btn-image');
+            const secVid = document.getElementById('editor-video-section');
+            const secImg = document.getElementById('editor-image-section');
+
+            if (type === 'Video') {
+                btnVid.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition bg-[#0e2138] text-white cursor-pointer";
+                btnImg.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition text-slate-600 hover:bg-slate-100 cursor-pointer";
+                secVid.classList.remove('hidden');
+                secImg.classList.add('hidden');
+            } else {
+                btnImg.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition bg-[#0e2138] text-white cursor-pointer";
+                btnVid.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition text-slate-600 hover:bg-slate-100 cursor-pointer";
+                secImg.classList.remove('hidden');
+                secVid.classList.add('hidden');
+            }
+        };
+
+        function renderMoodTags() {
+            const container = document.getElementById('mood-tags-container');
+            container.innerHTML = MOOD_OPTIONS.map(tag => {
+                const active = selectedMoods.includes(tag);
+                const isFunnel = ["TOFU", "MOFU", "BOFU"].includes(tag);
+                return `
+                    <button type="button" onclick="toggleMoodTag('${tag}')" class="px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${
+                        active
+                            ? (isFunnel ? 'bg-amber-500 text-white border-amber-500' : 'bg-[#0e2138] text-white border-[#0e2138]')
+                            : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }">
+                        ${tag}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        window.toggleMoodTag = function(tag) {
+            if (selectedMoods.includes(tag)) {
+                selectedMoods = selectedMoods.filter(t => t !== tag);
+            } else {
+                selectedMoods.push(tag);
+            }
+            renderMoodTags();
+        };
+
+        function renderSceneRows(scenes = null) {
+            const tbody = document.getElementById('scene-table-body');
+            const rows = scenes || [
+                { label: "HOOK", visual: "", text: "" },
+                { label: "ฉากที่ 1", visual: "", text: "" },
+                { label: "ฉากที่ 2", visual: "", text: "" }
+            ];
+            tbody.innerHTML = rows.map((sc, idx) => `
+                <tr class="border-b border-slate-200 scene-row">
+                    <td class="p-2 font-semibold text-xs ${idx === 0 ? 'text-amber-600' : 'text-slate-700'}">
+                        <input type="text" class="scene-label w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 font-semibold" value="${escapeHTML(sc.label)}" ${idx === 0 ? 'readonly' : ''} />
+                    </td>
+                    <td class="p-2">
+                        <textarea rows="2" class="scene-visual w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs outline-none" placeholder="รายละเอียดภาพ / มุมกล้อง">${escapeHTML(sc.visual)}</textarea>
+                    </td>
+                    <td class="p-2">
+                        <textarea rows="2" class="scene-text w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs outline-none" placeholder="ข้อความขึ้นจอ / คำพูด">${escapeHTML(sc.text)}</textarea>
+                    </td>
+                    <td class="p-2 text-center">
+                        ${idx === 0 ? '<span class="text-xs text-slate-300">ล็อก</span>' : `<button type="button" onclick="this.closest('tr').remove(); reindexScenes();" class="text-rose-500 hover:text-rose-700 font-bold text-sm cursor-pointer">✕</button>`}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.addSceneRow = function() {
+            const tbody = document.getElementById('scene-table-body');
+            const count = tbody.querySelectorAll('.scene-row').length;
+            const tr = document.createElement('tr');
+            tr.className = "border-b border-slate-200 scene-row";
+            tr.innerHTML = `
+                <td class="p-2 font-semibold text-xs text-slate-700">
+                    <input type="text" class="scene-label w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 font-semibold" value="ฉากที่ ${count}" />
+                </td>
+                <td class="p-2">
+                    <textarea rows="2" class="scene-visual w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs outline-none" placeholder="รายละเอียดภาพ / มุมกล้อง"></textarea>
+                </td>
+                <td class="p-2">
+                    <textarea rows="2" class="scene-text w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs outline-none" placeholder="ข้อความขึ้นจอ / คำพูด"></textarea>
+                </td>
+                <td class="p-2 text-center">
+                    <button type="button" onclick="this.closest('tr').remove(); reindexScenes();" class="text-rose-500 hover:text-rose-700 font-bold text-sm cursor-pointer">✕</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        };
+
+        window.reindexScenes = function() {
+            const rows = document.querySelectorAll('#scene-table-body .scene-row');
+            rows.forEach((row, idx) => {
+                if (idx > 0) {
+                    row.querySelector('.scene-label').value = `ฉากที่ ${idx}`;
+                }
+            });
+        };
+
+        window.openBriefEditor = function(briefToEdit = null) {
+            const today = getTodayShortDate();
+            if (!briefToEdit) {
+                document.getElementById('edit-brief-id').value = "";
+                switchEditorTab('Video');
+                document.getElementById('vid-project-name').value = "นนทวี";
+                document.getElementById('vid-title').value = "";
+                document.getElementById('vid-date').value = today;
+                document.getElementById('vid-duration').value = "";
+                document.getElementById('vid-ref').value = "";
+                document.getElementById('vid-custom-mood').value = "";
+                selectedMoods = ["TOFU"];
+                renderMoodTags();
+                renderSceneRows();
+
+                document.getElementById('img-project-name').value = "นนทวี";
+                document.getElementById('img-title').value = "";
+                document.getElementById('img-resolution').value = "1080x1350 px";
+                document.getElementById('img-date').value = today;
+                document.getElementById('img-brief-detail').value = "";
+                document.getElementById('img-footage').value = "";
+                document.getElementById('img-reference').value = "";
+            } else {
+                document.getElementById('edit-brief-id').value = briefToEdit.id;
+                switchEditorTab(briefToEdit.type);
+                if (briefToEdit.type === 'Video') {
+                    document.getElementById('vid-project-name').value = briefToEdit.projectName || "นนทวี";
+                    document.getElementById('vid-title').value = briefToEdit.title || "";
+                    document.getElementById('vid-date').value = briefToEdit.date || today;
+                    document.getElementById('vid-ratio').value = briefToEdit.ratio || "9:16 (Reels / TikTok / Shorts)";
+                    document.getElementById('vid-duration').value = briefToEdit.duration || "";
+                    document.getElementById('vid-ref').value = briefToEdit.ref || "";
+                    document.getElementById('vid-custom-mood').value = briefToEdit.customMood || "";
+                    selectedMoods = briefToEdit.moods || [];
+                    renderMoodTags();
+                    renderSceneRows(briefToEdit.scenes || []);
+                } else {
+                    document.getElementById('img-project-name').value = briefToEdit.projectName || "นนทวี";
+                    document.getElementById('img-title').value = briefToEdit.title || "";
+                    document.getElementById('img-resolution').value = briefToEdit.resolution || "";
+                    document.getElementById('img-date').value = briefToEdit.date || today;
+                    document.getElementById('img-brief-detail').value = briefToEdit.briefDetail || "";
+                    document.getElementById('img-footage').value = briefToEdit.footage || "";
+                    document.getElementById('img-reference').value = briefToEdit.reference || "";
+                }
+            }
+            switchPage('editor');
+        };
+
+        window.handleSaveBrief = async function() {
+            const btn = document.getElementById('btn-save-brief');
+            btn.disabled = true;
+            btn.textContent = "กำลังบันทึก...";
+
+            const editId = document.getElementById('edit-brief-id').value;
+            const docId = editId || ("brief-" + Date.now());
+            const existing = briefs.find(b => b.id === editId);
+
+            let payload = {
+                id: docId,
+                type: currentEditorType,
+                status: existing ? existing.status : 'pending',
+                createdAt: existing ? existing.createdAt : Date.now()
+            };
+
+            if (currentEditorType === 'Video') {
+                const scenes = [];
+                document.querySelectorAll('#scene-table-body .scene-row').forEach(row => {
+                    scenes.push({
+                        label: row.querySelector('.scene-label').value,
+                        visual: row.querySelector('.scene-visual').value,
+                        text: row.querySelector('.scene-text').value
+                    });
                 });
-            } catch (e) {
-                console.error("Firebase init error:", e);
-                loadBriefsFromLocalFallback();
+                payload = {
+                    ...payload,
+                    projectName: document.getElementById('vid-project-name').value.trim() || "นนทวี",
+                    title: document.getElementById('vid-title').value.trim() || "วิดีโอคอนเทนต์",
+                    date: document.getElementById('vid-date').value.trim() || getTodayShortDate(),
+                    ratio: document.getElementById('vid-ratio').value,
+                    duration: document.getElementById('vid-duration').value.trim(),
+                    ref: document.getElementById('vid-ref').value.trim(),
+                    moods: selectedMoods,
+                    customMood: document.getElementById('vid-custom-mood').value.trim(),
+                    scenes
+                };
+            } else {
+                payload = {
+                    ...payload,
+                    projectName: document.getElementById('img-project-name').value.trim() || "นนทวี",
+                    title: document.getElementById('img-title').value.trim() || "ภาพโปรโมชัน",
+                    resolution: document.getElementById('img-resolution').value.trim(),
+                    date: document.getElementById('img-date').value.trim() || getTodayShortDate(),
+                    briefDetail: document.getElementById('img-brief-detail').value.trim(),
+                    footage: document.getElementById('img-footage').value.trim(),
+                    reference: document.getElementById('img-reference').value.trim()
+                };
             }
-        }
 
-        function loadBriefsFromLocalFallback() {
             try {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                briefs = raw ? JSON.parse(raw) : [...DEFAULT_SAMPLE_BRIEFS];
+                await setDoc(doc(db, BRIEFS_COLLECTION, docId), payload);
+                showToast("บันทึกบรีฟขึ้นระบบเรียบร้อยแล้ว", "success");
+                switchPage('home');
             } catch (e) {
-                briefs = [...DEFAULT_SAMPLE_BRIEFS];
+                console.error(e);
+                showToast("บันทึกไม่สำเร็จ กรุณาตรวจสอบ Firestore Rules", "error");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "บันทึกบรีฟเข้าระบบ";
             }
-            renderHomeLists();
+        };
+
+        // PDF Viewer
+        window.openPdfViewer = function(id) {
+            activeBriefId = id;
+            renderPdfPreview(id);
+            switchPage('pdf-viewer');
+        };
+
+        function renderPdfPreview(id) {
+            const item = briefs.find(b => b.id === id);
+            if (!item) return;
+
+            const statusBtn = document.getElementById('btn-toggle-status');
+            if (item.status === 'done') {
+                statusBtn.textContent = "↺ ย้ายกลับ Update Brief";
+                statusBtn.className = "bg-amber-500 hover:bg-amber-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer";
+            } else {
+                statusBtn.textContent = "✓ ย้ายไป Job Done";
+                statusBtn.className = "bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition cursor-pointer";
+            }
+
+            const sheet = document.getElementById('pdf-document-sheet');
+            if (item.type === 'Video') {
+                sheet.innerHTML = `
+                    <div class="border-b-2 border-[#0e2138] pb-4 mb-6 flex justify-between items-end">
+                        <div>
+                            <p class="text-xs font-bold tracking-widest text-slate-500 uppercase">NOANTAWEE SOCIAL BRIEF</p>
+                            <h1 class="text-2xl font-bold text-[#0e2138] mt-1">${escapeHTML(item.title)}</h1>
+                        </div>
+                        <div class="text-right text-xs text-slate-600">
+                            <p><span class="font-semibold">ประเภท:</span> Video Brief</p>
+                            <p><span class="font-semibold">วันที่:</span> ${escapeHTML(item.date)}</p>
+                            <p><span class="font-semibold">สถานะ:</span> ${item.status === 'done' ? 'เสร็จสิ้น (Job Done)' : 'กำลังดำเนินการ'}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm mb-6">
+                        <div><span class="font-semibold text-slate-600">โครงการ:</span> ${escapeHTML(item.projectName)}</div>
+                        <div><span class="font-semibold text-slate-600">สัดส่วนภาพ:</span> ${escapeHTML(item.ratio)}</div>
+                        <div><span class="font-semibold text-slate-600">ความยาว:</span> ${escapeHTML(item.duration || '-')}</div>
+                        <div class="truncate"><span class="font-semibold text-slate-600">ลิงก์ Ref/Footage:</span> ${item.ref ? `<a href="${escapeHTML(item.ref)}" target="_blank" class="text-blue-600 underline">${escapeHTML(item.ref)}</a>` : '-'}</div>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">สไตล์ / อารมณ์ / Funnel</h3>
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            ${(item.moods || []).map(m => `<span class="px-3 py-1 bg-[#0e2138] text-white text-xs rounded-full font-medium">${escapeHTML(m)}</span>`).join('')}
+                        </div>
+                        ${item.customMood ? `<p class="text-sm text-slate-700 mt-1">${escapeHTML(item.customMood)}</p>` : ''}
+                    </div>
+
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">ลำดับภาพและบทพูด (Storyboard & Script)</h3>
+                        <table class="w-full border-collapse border border-slate-300 text-sm">
+                            <thead>
+                                <tr class="bg-[#0e2138] text-white">
+                                    <th class="border border-slate-300 p-2.5 w-28 text-left">ช่วง / ฉาก</th>
+                                    <th class="border border-slate-300 p-2.5 text-left">ภาพที่เห็น (Visual)</th>
+                                    <th class="border border-slate-300 p-2.5 text-left">ข้อความขึ้นจอ / เสียงพากย์</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(item.scenes || []).map((s, i) => `
+                                    <tr class="${i === 0 ? 'bg-amber-50/70' : ''}">
+                                        <td class="border border-slate-300 p-2.5 font-bold ${i === 0 ? 'text-amber-700' : 'text-[#0e2138]'}">${escapeHTML(s.label)}</td>
+                                        <td class="border border-slate-300 p-2.5 whitespace-pre-line">${escapeHTML(s.visual || '-')}</td>
+                                        <td class="border border-slate-300 p-2.5 whitespace-pre-line">${escapeHTML(s.text || '-')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                sheet.innerHTML = `
+                    <div class="border-b-2 border-[#0e2138] pb-4 mb-6 flex justify-between items-end">
+                        <div>
+                            <p class="text-xs font-bold tracking-widest text-slate-500 uppercase">NOANTAWEE SOCIAL BRIEF</p>
+                            <h1 class="text-2xl font-bold text-[#0e2138] mt-1">${escapeHTML(item.title)}</h1>
+                        </div>
+                        <div class="text-right text-xs text-slate-600">
+                            <p><span class="font-semibold">ประเภท:</span> Image Brief</p>
+                            <p><span class="font-semibold">วันที่:</span> ${escapeHTML(item.date)}</p>
+                            <p><span class="font-semibold">สถานะ:</span> ${item.status === 'done' ? 'เสร็จสิ้น (Job Done)' : 'กำลังดำเนินการ'}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm mb-6">
+                        <div><span class="font-semibold text-slate-600">โครงการ:</span> ${escapeHTML(item.projectName)}</div>
+                        <div><span class="font-semibold text-slate-600">Resolution ภาพ:</span> ${escapeHTML(item.resolution || '-')}</div>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">รายละเอียดบรีฟและข้อความในภาพ</h3>
+                        <div class="p-4 border border-slate-300 rounded-lg min-h-[160px] text-sm whitespace-pre-line leading-relaxed">
+                            ${escapeHTML(item.briefDetail || '-')}
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 text-sm bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <div>
+                            <span class="font-semibold text-slate-700">ลิงก์ฟุตเทจ (Footage): </span>
+                            ${item.footage ? `<a href="${escapeHTML(item.footage)}" target="_blank" class="text-blue-600 underline break-all">${escapeHTML(item.footage)}</a>` : '-'}
+                        </div>
+                        <div>
+                            <span class="font-semibold text-slate-700">ลิงก์ตัวอย่างงาน (Reference): </span>
+                            ${item.reference ? `<a href="${escapeHTML(item.reference)}" target="_blank" class="text-blue-600 underline break-all">${escapeHTML(item.reference)}</a>` : '-'}
+                        </div>
+                    </div>
+                `;
+            }
         }
 
-        async function saveBriefToCloud(briefObj) {
-            if (isFirebaseReady) {
-                try {
-                    const docRef = doc(db, BRIEFS_COLLECTION, briefObj.id);
-                    await setDoc(docRef, briefObj);
-                } catch (e) {
-                    console.error("Save error:", e);
-                    showToast('บันทึกขึ้น Cloud ไม่สำเร็จ ตรวจสอบสิทธิ์ Firestore Rules', 'error');
-                }
-            } else {
-                const idx = briefs.findIndex(b => b.id === briefObj.id);
-                if (idx > -1) briefs[idx] = briefObj;
-                else briefs.unshift(briefObj);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(briefs));
-                renderHomeLists();
+        window.toggleActiveBriefStatus = async function() {
+            const item = briefs.find(b => b.id === activeBriefId);
+            if (!item) return;
+            const newStatus = item.status === 'done' ? 'pending' : 'done';
+            try {
+                await updateDoc(doc(db, BRIEFS_COLLECTION, activeBriefId), { status: newStatus });
+                showToast(newStatus === 'done' ? "ย้ายงานไป Job Done แล้ว" : "ย้ายกลับไป Update Brief แล้ว", "success");
+            } catch (e) {
+                showToast("อัปเดตสถานะไม่สำเร็จ", "error");
             }
+        };
+
+        window.editActiveBrief = function() {
+            const item = briefs.find(b => b.id === activeBriefId);
+            if (item) openBriefEditor(item);
+        };
+
+        window.requestDeleteActiveBrief = function() {
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            document.getElementById('confirm-cancel-btn').onclick = () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            };
+
+            document.getElementById('confirm-ok-btn').onclick = async () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                try {
+                    await deleteDoc(doc(db, BRIEFS_COLLECTION, activeBriefId));
+                    showToast("ลบบรีฟเรียบร้อยแล้ว", "success");
+                    switchPage('home');
+                } catch (e) {
+                    showToast("ลบบรีฟไม่สำเร็จ", "error");
+                }
+            };
+        };
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
-        async function deleteBriefFromCloud(id) {
-            if (isFirebaseReady) {
-                try {
-                    await deleteDoc(doc(db, BRIEFS_COLLECTION, id));
-                } catch (e) {
-                    console.error("Delete error:", e);
-                    showToast('ลบข้อมูลไม่สำเร็จ', 'error');
-                }
-            } else {
-                briefs = briefs.filter(b => b.id !== id);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(briefs));
-                renderHomeLists();
-            }
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bg = type === 'error' ? 'bg-rose-600' : 'bg-emerald-600';
+            toast.className = `pointer-events-auto ${bg} text-white px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium transition-opacity duration-300`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
-<!-- ... existing code ... -->
+
+        // Start App
+        initFirestoreListener();
+    </script>
+</body>
+</html>
