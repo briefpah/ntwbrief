@@ -1,1559 +1,177 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Noantawee Social Brief - ระบบจัดการบรีฟโซเชียลมีเดีย</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts: Prompt, Kanit และ Cormorant Garamond (สำหรับฟอนต์หัวข้อสไตล์หรูหราแบบในภาพ) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Kanit:wght@300;400;500;600;700&family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,600&display=swap" rel="stylesheet">
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+<!-- ... existing code ... -->
+                    <p class="text-white/90 text-sm sm:text-base font-light leading-relaxed mb-7 max-w-lg">
+                        พื้นที่สำหรับการสร้าง Brief โซเชียลมีเดีย ปรับแต่งให้ง่ายต่อการทำงานและอัปเดตงานในระบบ และปรับแก้ได้ตามที่ต้องการ ตอนนี้เป็นเวอร์ชัน V.0.1 ใช้ไปก่อนครับแง่ง ๆ
+                    </p>
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Prompt', 'Kanit', 'sans-serif'],
-                        heading: ['Prompt', 'sans-serif'],
-                        serifTitle: ['Cormorant Garamond', 'serif'],
+                    <!-- แถบสถานะการเชื่อมต่อ Firebase -->
+                    <div class="flex items-center gap-2 mb-4 text-xs">
+                        <span id="firebase-sync-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span id="firebase-sync-text" class="text-white/80">กำลังเชื่อมต่อฐานข้อมูล ntwbrief...</span>
+                    </div>
+
+                    <!-- แถวที่ 4: คอลัมน์ Update Brief และ Job Done -->
+<!-- ... existing code ... -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        // =========================================================================
+        // 1. FIREBASE CONFIGURATION (โปรเจกต์ ntwbrief)
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyArw6MtTWTreAlJxmC01_4MQUSCVUvdD8o",
+            authDomain: "ntwbrief.firebaseapp.com",
+            projectId: "ntwbrief",
+            storageBucket: "ntwbrief.firebasestorage.app",
+            messagingSenderId: "1071403608145",
+            appId: "1:1071403608145:web:2b8dc0d29daa16ff18f070",
+            measurementId: "G-FB9RXDBCHL"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const BRIEFS_COLLECTION = "briefs";
+
+        // =========================================================================
+        // 2. CONSTANTS & GLOBAL STATE
+        // =========================================================================
+        const STORAGE_KEY = 'noantawee_social_briefs_v1';
+        const CUSTOM_BG_KEY = 'noantawee_custom_bg_v1';
+        const CUSTOM_LOGO_KEY = 'noantawee_custom_logo_v1';
+
+        const FUNNEL_TAGS = ['TOFU', 'MOFU', 'BOFU'];
+        const MOOD_TAGS = [
+            'อบอุ่น / ครอบครัว',
+            'หรูหรา / พรีเมียม',
+            'ทันสมัย / โมเดิร์น',
+            'กระชับ / ฉับไว',
+            'เล่าเรื่อง / รีวิวจริง',
+            'โปรโมชัน / กระตุ้นยอด'
+        ];
+
+        let briefs = [];
+        let activeBriefId = null;
+        let currentEditorType = 'Video';
+        let isFirebaseReady = false;
+
+        // ข้อมูลตัวอย่างเริ่มต้นเมื่อเปิดใช้งานครั้งแรก
+        const DEFAULT_SAMPLE_BRIEFS = [
+            {
+                id: 'ntw-demo-1',
+                type: 'Video',
+                title: 'พาทัวร์บ้านเดี่ยวโซนใหม่ สไตล์โมเดิร์น',
+                projectName: 'นนทวี',
+                date: new Date().toISOString().split('T')[0],
+                status: 'pending',
+                duration: '30 - 60 วินาที (Short Video)',
+                ratio: '9:16 (แนวตั้ง - TikTok / Reels / Shorts)',
+                funnels: ['TOFU'],
+                moods: ['อบอุ่น / ครอบครัว', 'ทันสมัย / โมเดิร์น'],
+                customMood: 'ตัดต่อกระชับ โทนสีสว่างอบอุ่น',
+                hook: {
+                    timecode: '00:00 - 00:03',
+                    visual: 'มุมโดรนเปิดหน้าโครงการพร้อมแสงเช้า แล้วตัดเข้าช็อตเปิดประตูบ้าน',
+                    audio: 'งบ 4 ล้านต้นๆ ได้บ้านเดี่ยวพื้นที่กว้างขนาดนี้เลยเหรอ?'
+                },
+                shots: [
+                    {
+                        timecode: '00:03 - 00:15',
+                        visual: 'เดินชมโถงรับแขกโชว์เพดานสูงและแสงธรรมชาติ',
+                        audio: 'พามาดูโซนรับแขกที่เชื่อมต่อกับพื้นที่ทานข้าว โปร่งโล่งไม่อึดอัด'
                     },
-                    colors: {
-                        noantawee: {
-                            950: '#0b1829',
-                            900: '#132742',
-                            800: '#1c375b',
-                            700: '#274975',
-                            100: '#e2eaf4',
-                            50: '#f3f7fb',
-                        }
+                    {
+                        timecode: '00:15 - 00:30',
+                        visual: 'พาขึ้นชั้น 2 ชมห้องนอน Master Bedroom',
+                        audio: 'ห้องนอนใหญ่พร้อมพื้นที่ Walk-in Closet ลงตัวสำหรับครอบครัวเริ่มต้น'
                     }
-                }
+                ],
+                footage: 'https://drive.google.com/',
+                reference: '',
+                notes: 'วางโลโก้โครงการนนทวีมุมขวาบนตลอดคลิป',
+                createdAt: Date.now()
             }
-        }
-    </script>
-
-    <style>
-        body {
-            font-family: 'Prompt', 'Kanit', sans-serif;
-            background-color: #132742;
-            color: #ffffff;
-            overflow-x: hidden;
-        }
-
-        /* =========================================================
-           CUSTOM SCROLLBAR สำหรับรายการ Update Brief & Job Done
-           ========================================================= */
-        .custom-white-scroll::-webkit-scrollbar {
-            width: 5px;
-        }
-        .custom-white-scroll::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.25);
-            border-radius: 999px;
-        }
-        .custom-white-scroll::-webkit-scrollbar-thumb {
-            background: #ffffff;
-            border-radius: 999px;
-        }
-        .custom-white-scroll::-webkit-scrollbar-thumb:hover {
-            background: #e2e8f0;
-        }
-
-        /* พื้นหลังโทนสีน้ำเงินเข้มไล่เฉดแบบภาพต้นแบบ */
-        .hero-navy-backdrop {
-            background: radial-gradient(circle at 26% 50%, #245b82 0%, #173458 38%, #10243e 100%);
-        }
-
-        /* แสงฟุ้งวงกลมด้านหลังรูปบ้านฝั่งซ้าย */
-        .house-radial-glow {
-            background: radial-gradient(circle, rgba(165, 214, 247, 0.45) 0%, rgba(77, 155, 207, 0.25) 45%, rgba(16, 36, 62, 0) 72%);
-        }
-
-        /* ปุ่มแคปซูลตัดมุมเฉียงด้านขวาเหมือนในภาพต้นแบบ */
-        .btn-slanted-pill {
-            border-top-left-radius: 9999px;
-            border-bottom-left-radius: 9999px;
-            clip-path: polygon(0 0, 100% 0, 90% 100%, 0% 100%);
-        }
-
-        /* สไตล์กระดาษ A4 สำหรับเปิดอ่าน PDF ในหน้าเว็บ */
-        .a4-document-sheet {
-            background: #ffffff;
-            color: #1e293b;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
-        }
-
-        /* การตั้งค่าสำหรับการสั่งพิมพ์ / Save as PDF */
-        @media print {
-            body {
-                background: #ffffff !important;
-                color: #000000 !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            #view-pdf {
-                position: static !important;
-                padding: 0 !important;
-                background: #ffffff !important;
-                display: block !important;
-            }
-            .a4-document-sheet {
-                box-shadow: none !important;
-                border: none !important;
-                padding: 0 !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                margin: 0 !important;
-            }
-            .print-avoid-break {
-                break-inside: avoid;
-            }
-        }
-    </style>
-</head>
-<body class="min-h-screen relative selection:bg-sky-400 selection:text-noantawee-950">
-
-    <!-- Toast แจ้งเตือนมุมล่างซ้าย -->
-    <div id="toast-container" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
-
-    <!-- Modal ยืนยันการลบ -->
-    <div id="confirm-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
-        <div class="bg-white text-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <div class="flex items-center gap-3 text-red-600 mb-3">
-                <div class="p-2 bg-red-50 rounded-full">
-                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-slate-900">ยืนยันการลบบรีฟ</h3>
-            </div>
-            <p id="confirm-message" class="text-slate-600 text-sm mb-6 leading-relaxed">
-                คุณแน่ใจหรือไม่ว่าต้องการลบบรีฟงานนี้?
-            </p>
-            <div class="flex justify-end gap-3">
-                <button id="confirm-cancel-btn" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-                    ยกเลิก
-                </button>
-                <button id="confirm-ok-btn" class="px-4 py-2 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors">
-                    ลบบรีฟนี้
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===================================================================== -->
-    <!-- มุมมองที่ 1: หน้าหลักแสดงตัวงาน (LANDING / DASHBOARD VIEW)               -->
-    <!-- ===================================================================== -->
-    <section id="view-home" class="relative min-h-screen w-full overflow-hidden hero-navy-backdrop">
-        
-        <!-- 1. รูปภาพพื้นหลัง 1920x1080 เต็มจอ (มีภาพบ้านอยู่ฝั่งซ้ายในตัวไฟล์ bg.png แล้ว) -->
-        <div class="absolute inset-0 z-0 pointer-events-none">
-            <img id="bg-image" 
-                 src="bg.png" 
-                 alt="Noantawee Background 1920x1080" 
-                 onerror="this.classList.add('hidden'); document.getElementById('bg-fallback-guide').classList.remove('hidden');"
-                 class="w-full h-full object-cover object-left lg:object-center">
-            
-            <!-- แสดงกราฟิกพื้นหลังโทนสีน้ำเงินฝั่งซ้ายกรณีที่ยังไม่ได้อัปโหลดไฟล์ bg.png -->
-            <div id="bg-fallback-guide" class="hidden w-full h-full relative">
-                <div class="house-radial-glow absolute top-1/2 left-[26%] -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] sm:w-[540px] sm:h-[540px] rounded-full"></div>
-            </div>
-        </div>
-
-        <!-- 2. โครงสร้าง Grid 2 คอลัมน์ซ้าย-ขวา (50% ซ้ายปล่อยโล่ง / 50% ขวาจัดวางตามเส้น Grid) -->
-        <div class="relative z-10 w-full min-h-screen grid grid-cols-1 lg:grid-cols-2">
-            
-            <!-- ========================================================= -->
-            <!-- ฝั่งซ้าย (50%): ปล่อยโล่งทั้งหมดเพื่อให้เห็นภาพบ้านบน bg.png เต็มตา -->
-            <!-- ========================================================= -->
-            <div class="hidden lg:block w-full h-full pointer-events-none"></div>
-
-            <!-- ========================================================= -->
-            <!-- ฝั่งขวา (50%): คอนเทนเนอร์เนื้อหามุมขวา แบ่งแถวตามเส้น Grid สีแดง -->
-            <!-- ========================================================= -->
-            <div class="w-full min-h-screen flex flex-col justify-center px-6 sm:px-12 lg:pl-6 lg:pr-12 xl:pr-20 py-12">
-                <div class="w-full max-w-[600px] flex flex-col">
-                    
-                    <!-- แถวที่ 1 & 2: โลโก้ NOANTAWEE + ปุ่ม 'สร้างบรีฟ' + SOCIAL BRIEF -->
-                    <div class="w-full">
-                        <!-- กรณีผู้ใช้อัปโหลดไฟล์ logo.png ของตัวเอง -->
-                        <div id="custom-logo-wrapper" class="hidden flex flex-col items-start">
-                            <img id="logo-image" 
-                                 src="logo.png" 
-                                 alt="Noantawee Social Brief Logo" 
-                                 onload="document.getElementById('logo-default-grid').classList.add('hidden'); document.getElementById('custom-logo-wrapper').classList.remove('hidden');"
-                                 onerror="document.getElementById('custom-logo-wrapper').classList.add('hidden'); document.getElementById('logo-default-grid').classList.remove('hidden');"
-                                 class="max-h-36 sm:max-h-44 w-auto object-contain mb-3">
-                            <button onclick="openEditorForNew()" 
-                                    class="btn-slanted-pill bg-white hover:bg-sky-50 text-noantawee-950 font-heading font-bold italic text-xl sm:text-2xl pl-6 pr-9 py-2 shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer">
-                                สร้างบรีฟ
-                            </button>
-                        </div>
-
-                        <!-- เลเอาท์มาตรฐานแบ่ง 2 แถวตามเส้น Grid สีแดง -->
-                        <div id="logo-default-grid" class="select-none">
-                            <!-- แถวบน: NOANTAWEE -->
-                            <div class="font-serifTitle text-4xl sm:text-5xl xl:text-[64px] tracking-[0.06em] text-white font-normal leading-[0.95] uppercase">
-                                NOANTAWEE
-                            </div>
-                            <!-- แถวล่าง: ปุ่มแคปซูล 'สร้างบรีฟ' + SOCIAL BRIEF -->
-                            <div class="flex flex-wrap items-center gap-3 sm:gap-4 mt-2.5">
-                                <button onclick="openEditorForNew()" 
-                                        class="btn-slanted-pill bg-white hover:bg-sky-50 text-noantawee-950 font-heading font-bold italic text-xl sm:text-2xl xl:text-[28px] pl-6 pr-9 py-2 sm:py-2.5 shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0">
-                                    สร้างบรีฟ
-                                </button>
-                                <span class="font-serifTitle text-4xl sm:text-5xl xl:text-[64px] tracking-[0.04em] text-white font-normal leading-[0.95] uppercase">
-                                    SOCIAL BRIEF
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- แถวที่ 3: ข้อความคำอธิบาย -->
-                    <div class="mt-4 mb-7">
-                        <p class="text-white/95 text-xs sm:text-sm xl:text-[15px] font-light leading-relaxed">
-                            พื้นที่สำหรับการสร้าง Brief โซเชียลมีเดีย ปรับแต่งให้ง่ายต่อการทำงาน
-                            และอัปเดตงานในระบบ และปรับแก้ได้ตามที่ต้องการ ตอนนี้เป็นเวอร์ชัน V.0.1
-                            ใช้ไปก่อนครับแง้ ๆ
-                        </p>
-                    </div>
-
-                    <!-- แถวที่ 4: ตาราง 2 คอลัมน์ Update Brief (ซ้าย) และ Job Done (ขวา) -->
-                    <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-                        
-                        <!-- คอลัมน์ซ้าย: Update Brief -->
-                        <div class="flex flex-col">
-                            <div class="flex items-center justify-between mb-2">
-                                <h2 class="text-white font-heading font-semibold text-base sm:text-lg tracking-wide">
-                                    Update Brief
-                                </h2>
-                                <span id="pending-count" class="text-[11px] bg-white/15 text-white px-2 py-0.5 rounded-full">0</span>
-                            </div>
-                            
-                            <!-- รายการที่มี Scrollbar สีขาวด้านขวา -->
-                            <div id="list-update-brief" class="custom-white-scroll max-h-40 overflow-y-auto pr-3 space-y-2">
-                                <!-- สร้างด้วย JavaScript -->
-                            </div>
-                        </div>
-
-                        <!-- คอลัมน์ขวา: Job Done -->
-                        <div class="flex flex-col">
-                            <div class="flex items-center justify-between mb-2">
-                                <h2 class="text-white font-heading font-semibold text-base sm:text-lg tracking-wide">
-                                    Job Done
-                                </h2>
-                                <span id="done-count" class="text-[11px] bg-emerald-400/20 text-emerald-200 px-2 py-0.5 rounded-full">0</span>
-                            </div>
-
-                            <!-- รายการที่มี Scrollbar สีขาวด้านขวา -->
-                            <div id="list-job-done" class="custom-white-scroll max-h-40 overflow-y-auto pr-3 space-y-2">
-                                <!-- สร้างด้วย JavaScript -->
-                            </div>
-                        </div>
-
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. ปุ่มตั้งค่ารูปภาพมุมขวาล่าง (เลือกอัปโหลด BG 1920x1080 และ Logo) -->
-        <div class="fixed bottom-4 right-4 z-20 flex items-center gap-2 no-print">
-            <button onclick="toggleAssetPanel()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-noantawee-950/85 hover:bg-noantawee-900 text-white/90 hover:text-white text-xs border border-white/20 backdrop-blur-md shadow-lg transition-all" title="อัปโหลดรูป BG 1920x1080 และ โลโก้">
-                <i data-lucide="image-plus" class="w-3.5 h-3.5 text-sky-300"></i>
-                <span>ตั้งค่ารูปภาพ (BG 1920x1080 / โลโก้)</span>
-            </button>
-        </div>
-
-        <!-- Popover ตั้งค่ารูปภาพ -->
-        <div id="asset-settings-panel" class="fixed bottom-16 right-4 z-30 w-80 bg-white text-slate-800 rounded-2xl p-4 shadow-2xl border border-slate-200 hidden no-print">
-            <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-100">
-                <span class="font-semibold text-sm text-noantawee-900">ตั้งค่ารูปภาพหน้าแรก</span>
-                <button onclick="toggleAssetPanel()" class="text-slate-400 hover:text-slate-600">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-            <div class="space-y-3 text-xs">
-                <div>
-                    <label class="block font-medium text-slate-700 mb-1">1. รูปพื้นหลังบ้าน 1920x1080 (Background)</label>
-                    <input type="file" accept="image/*" onchange="previewLocalAsset(event, 'bg')" class="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-noantawee-100 file:text-noantawee-900 hover:file:bg-noantawee-200 cursor-pointer">
-                    <p class="text-[10px] text-slate-400 mt-0.5">*บนโฮสต์จริงให้ตั้งชื่อไฟล์ว่า <b>bg.png</b></p>
-                </div>
-                <div>
-                    <label class="block font-medium text-slate-700 mb-1">2. รูปโลโก้หัวข้อฝั่งขวา (Logo)</label>
-                    <input type="file" accept="image/*" onchange="previewLocalAsset(event, 'logo')" class="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-noantawee-100 file:text-noantawee-900 hover:file:bg-noantawee-200 cursor-pointer">
-                    <p class="text-[10px] text-slate-400 mt-0.5">*บนโฮสต์จริงให้ตั้งชื่อไฟล์ว่า <b>logo.png</b></p>
-                </div>
-                <div class="pt-2 border-t border-slate-100 flex justify-between items-center">
-                    <button onclick="resetCustomAssets()" class="text-red-500 hover:underline text-[11px]">รีเซ็ตรูปเริ่มต้น</button>
-                    <button onclick="exportAllJSON()" class="text-noantawee-800 font-medium hover:underline text-[11px] flex items-center gap-1">
-                        <i data-lucide="download" class="w-3 h-3"></i> สำรองข้อมูล JSON
-                    </button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===================================================================== -->
-    <!-- มุมมองที่ 2: หน้าสร้างบรีฟ (BRIEF EDITOR VIEW)                         -->
-    <!-- ===================================================================== -->
-    <section id="view-editor" class="hidden min-h-screen bg-slate-100 text-slate-800 pb-16">
-        
-        <!-- Top Header ของหน้าสร้างบรีฟ -->
-        <header class="bg-noantawee-900 text-white sticky top-0 z-30 shadow-md">
-            <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-                <button onclick="goHome()" class="inline-flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white bg-white/10 hover:bg-white/15 px-3.5 py-2 rounded-xl transition-colors">
-                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                    <span>กลับหน้าหลัก</span>
-                </button>
-
-                <div class="text-center hidden sm:block">
-                    <h1 id="editor-page-title" class="font-heading font-semibold text-base tracking-wide">สร้างบรีฟงานใหม่</h1>
-                    <p class="text-[11px] text-sky-200">Noantawee Social Brief</p>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <button onclick="saveBriefAndOpenPDF()" class="inline-flex items-center gap-1.5 bg-sky-400 hover:bg-sky-300 text-noantawee-950 font-heading font-semibold px-4 py-2 rounded-xl text-xs sm:text-sm transition-all shadow-sm">
-                        <i data-lucide="file-check-2" class="w-4 h-4"></i>
-                        <span>บันทึก & เปิดดู PDF</span>
-                    </button>
-                </div>
-            </div>
-        </header>
-
-        <!-- Container ฟอร์ม -->
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
-            
-            <!-- แถบเลือกประเภทบรีฟ 2 แท็บ: วิดีโอ / ภาพนิ่ง -->
-            <div class="bg-white p-1.5 rounded-2xl shadow-xs border border-slate-200 grid grid-cols-2 gap-2">
-                <button type="button" id="tab-btn-video" onclick="switchBriefTypeTab('Video')" 
-                        class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-heading font-semibold text-sm transition-all bg-noantawee-900 text-white shadow-sm">
-                    <i data-lucide="video" class="w-4 h-4"></i>
-                    <span>บรีฟวิดีโอ (Video Brief)</span>
-                </button>
-                <button type="button" id="tab-btn-image" onclick="switchBriefTypeTab('Image')" 
-                        class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-heading font-semibold text-sm transition-all text-slate-600 hover:bg-slate-50">
-                    <i data-lucide="image" class="w-4 h-4"></i>
-                    <span>บรีฟภาพนิ่ง (Image Brief)</span>
-                </button>
-            </div>
-
-            <!-- ========================================================= -->
-            <!-- แท็บที่ 1: ฟอร์มบรีฟวิดีโอ (VIDEO BRIEF FORM)                -->
-            <!-- ========================================================= -->
-            <div id="form-video-container" class="space-y-6">
-                
-                <!-- 1. ข้อมูลโปรเจกต์ (เปลี่ยนชื่อลูกค้าเป็น ชื่อโครงการบ้าน ค่าเริ่มต้น 'นนทวี') -->
-                <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-200 space-y-4">
-                    <div class="flex items-center gap-2.5 text-noantawee-900 border-b border-slate-100 pb-3">
-                        <div class="p-2 bg-noantawee-50 rounded-lg"><i data-lucide="folder-open" class="w-5 h-5"></i></div>
-                        <h3 class="font-heading font-semibold text-base sm:text-lg">1. ข้อมูลโปรเจกต์ (Project Info)</h3>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">ชื่อโปรเจกต์ / หัวข้อคลิป <span class="text-red-500">*</span></label>
-                            <input type="text" id="vid-title" placeholder="เช่น พาชมบ้านตัวอย่างโซนใหม่ โปรโมชันฟรีโอน" 
-                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 focus:ring-2 focus:ring-noantawee-700/20 outline-none text-sm">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">ชื่อโครงการบ้าน</label>
-                            <input type="text" id="vid-project" list="housing-projects" value="นนทวี" placeholder="เลือกหรือพิมพ์ชื่อโครงการ"
-                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 focus:ring-2 focus:ring-noantawee-700/20 outline-none text-sm font-medium text-noantawee-900">
-                            <datalist id="housing-projects">
-                                <option value="นนทวี">
-                                <option value="นนทวี วิลล์">
-                                <option value="นนทวี เรสซิเดนซ์">
-                                <option value="นนทวี พาร์ค">
-                            </datalist>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1.5">วันที่บรีฟ / ส่งงาน</label>
-                                <input type="date" id="vid-date" 
-                                       class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1.5">สถานะงาน</label>
-                                <select id="vid-status" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm bg-white">
-                                    <option value="pending">Update Brief (กำลังทำ)</option>
-                                    <option value="done">Job Done (เสร็จแล้ว)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. สเปกวิดีโอ (ตัดช่องความละเอียดออกตามที่กำหนด) -->
-                <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-200 space-y-4">
-                    <div class="flex items-center gap-2.5 text-noantawee-900 border-b border-slate-100 pb-3">
-                        <div class="p-2 bg-noantawee-50 rounded-lg"><i data-lucide="sliders-horizontal" class="w-5 h-5"></i></div>
-                        <h3 class="font-heading font-semibold text-base sm:text-lg">2. สเปกวิดีโอ (Video Specs)</h3>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">ความยาวโดยประมาณ</label>
-                            <input type="text" id="vid-duration" list="vid-duration-list" placeholder="เช่น 30 - 60 วินาที" 
-                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm">
-                            <datalist id="vid-duration-list">
-                                <option value="15 - 30 วินาที (Reels / TikTok)">
-                                <option value="30 - 60 วินาที (Short Video)">
-                                <option value="1 - 3 นาที (Tour / Review)">
-                                <option value="3 - 5 นาที (Full Walkthrough)">
-                            </datalist>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">อัตราส่วนภาพ (Aspect Ratio)</label>
-                            <select id="vid-ratio" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm bg-white">
-                                <option value="9:16 (แนวตั้ง - TikTok / Reels / Shorts)">9:16 (แนวตั้ง - TikTok / Reels / Shorts)</option>
-                                <option value="16:9 (แนวนอน - YouTube / Facebook)">16:9 (แนวนอน - YouTube / Facebook)</option>
-                                <option value="1:1 (สี่เหลี่ยมจัตุรัส - IG / FB Feed)">1:1 (สี่เหลี่ยมจัตุรัส - IG / FB Feed)</option>
-                                <option value="4:5 (แนวตั้ง - Social Ads)">4:5 (แนวตั้ง - Social Ads)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3. สไตล์และอารมณ์ + Funnel Tags (TOFU, MOFU, BOFU) -->
-                <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-200 space-y-4">
-                    <div class="flex items-center gap-2.5 text-noantawee-900 border-b border-slate-100 pb-3">
-                        <div class="p-2 bg-noantawee-50 rounded-lg"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
-                        <h3 class="font-heading font-semibold text-base sm:text-lg">3. สไตล์และอารมณ์ (Mood & Tone / Funnel)</h3>
-                    </div>
-
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-noantawee-900 uppercase tracking-wider mb-2">Marketing Funnel Stage:</label>
-                            <div id="funnel-tags-container" class="flex flex-wrap gap-2">
-                                <!-- สร้างแท็ก TOFU, MOFU, BOFU ด้วย JS -->
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-medium text-slate-500 mb-2">สไตล์และอารมณ์การตัดต่อ:</label>
-                            <div id="mood-tags-container" class="flex flex-wrap gap-2">
-                                <!-- สร้างแท็ก Mood ด้วย JS -->
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">รายละเอียดสไตล์เพิ่มเติม</label>
-                            <input type="text" id="vid-mood-custom" placeholder="เช่น ตัดต่อกระชับ ใส่ Sound Effect ประกอบจังหวะ โทนสีอบอุ่นหรูหรา" 
-                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 4. ลำดับภาพ (HOOK นำหน้า + ฉากที่ 1, 2, 3...) -->
-                <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-200 space-y-4">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                        <div class="flex items-center gap-2.5 text-noantawee-900">
-                            <div class="p-2 bg-noantawee-50 rounded-lg"><i data-lucide="clapperboard" class="w-5 h-5"></i></div>
-                            <div>
-                                <h3 class="font-heading font-semibold text-base sm:text-lg">4. ลำดับภาพและบทพูด (HOOK & Shot List)</h3>
-                                <p class="text-xs text-slate-500">เริ่มต้นด้วยช่วง HOOK ดึงดูดสายตา ตามด้วยฉากที่ 1, 2, 3 ตามลำดับ</p>
-                            </div>
-                        </div>
-                        <button type="button" onclick="addVideoShotRow()" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-noantawee-900 hover:bg-noantawee-800 text-white text-xs font-heading font-medium rounded-xl transition-colors self-start sm:self-auto">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
-                            เพิ่มฉากถัดไป
-                        </button>
-                    </div>
-
-                    <!-- กล่อง HOOK (ล็อกไว้บนสุดเสมอ) -->
-                    <div class="bg-amber-50/70 p-4 rounded-xl border-2 border-amber-300/80 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <span class="inline-flex items-center gap-1.5 text-xs font-heading font-bold text-amber-900 bg-amber-200/90 px-3 py-1 rounded-lg tracking-wide">
-                                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                                HOOK (ช่วงเปิดคลิป 3-5 วินาทีแรก)
-                            </span>
-                            <span class="text-[11px] text-amber-700 font-medium">จุดดึงดูดความสนใจ</span>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-                            <div class="md:col-span-3">
-                                <label class="block text-[11px] font-medium text-slate-600 mb-1">ช่วงเวลา (Timecode)</label>
-                                <input type="text" id="hook-time" value="00:00 - 00:03" placeholder="00:00 - 00:03"
-                                       class="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white text-xs focus:border-noantawee-700 outline-none">
-                            </div>
-                            <div class="md:col-span-5">
-                                <label class="block text-[11px] font-medium text-slate-600 mb-1">รายละเอียดภาพ / มุมกล้อง (Visual)</label>
-                                <textarea id="hook-visual" rows="2" placeholder="ภาพเปิดที่ดึงสายตา เช่น มุมโดรนหน้าโครงการ หรือช็อตเปิดประตูบ้าน..."
-                                          class="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white text-xs focus:border-noantawee-700 outline-none"></textarea>
-                            </div>
-                            <div class="md:col-span-4">
-                                <label class="block text-[11px] font-medium text-slate-600 mb-1">เสียงพากย์ / ข้อความขึ้นจอ (Audio & Text)</label>
-                                <textarea id="hook-audio" rows="2" placeholder="คำพาดหัวตัวใหญ่ หรือประโยคเปิดคลิป..."
-                                          class="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white text-xs focus:border-noantawee-700 outline-none"></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- รายการฉากที่ 1, 2, 3... -->
-                    <div id="video-shots-container" class="space-y-3">
-                        <!-- สร้างแถวฉากที่ 1, 2, 3 ด้วย JS -->
-                    </div>
-                </div>
-
-                <!-- 5. ฟุตเทจและรีเฟอร์เร้น -->
-                <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-200 space-y-4">
-                    <div class="flex items-center gap-2.5 text-noantawee-900 border-b border-slate-100 pb-3">
-                        <div class="p-2 bg-noantawee-50 rounded-lg"><i data-lucide="link" class="w-5 h-5"></i></div>
-                        <h3 class="font-heading font-semibold text-base sm:text-lg">5. ฟุตเทจและรีเฟอร์เร้น (Footage & Reference)</h3>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">ลิงก์ฟุตเทจ / โลโก้โครงการ (Google Drive)</label>
-                            <input type="text" id="vid-footage" placeholder="https://drive.google.com/..." 
-                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">ลิงก์ตัวอย่างงาน / เพลงประกอบ (Reference)</label>
-                            <input type="text" id="vid-ref" placeholder="https://www.tiktok.com/... หรือ YouTube" 
-                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">หมายเหตุเพิ่มเติม</label>
-                            <textarea id="vid-notes" rows="2" placeholder="ข้อควรระวัง โลโก้โครงการ หรือรายละเอียดเพิ่มเติม..." 
-                                      class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm"></textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ========================================================= -->
-            <!-- แท็บที่ 2: ฟอร์มบรีฟภาพนิ่ง (IMAGE BRIEF FORM)               -->
-            <!-- ========================================================= -->
-            <div id="form-image-container" class="hidden space-y-6">
-                
-                <!-- 1. ข้อมูลโปรเจกต์ + Resolution ของภาพ -->
-                <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-200 space-y-4">
-                    <div class="flex items-center gap-2.5 text-noantawee-900 border-b border-slate-100 pb-3">
-                        <div class="p-2 bg-noantawee-50 rounded-lg"><i data-lucide="image" class="w-5 h-5"></i></div>
-                        <h3 class="font-heading font-semibold text-base sm:text-lg">1. ข้อมูลโปรเจกต์ & ขนาดภาพ (Project & Resolution)</h3>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">ชื่อโปรเจกต์ / หัวข้อภาพอาร์ตเวิร์ก <span class="text-red-500">*</span></label>
-                            <input type="text" id="img-title" placeholder="เช่น ภาพโปรโมชันบ้านเดี่ยวพร้อมอยู่ แถมแอร์ทั้งหลัง" 
-                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 focus:ring-2 focus:ring-noantawee-700/20 outline-none text-sm">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">ชื่อโครงการบ้าน</label>
-                            <input type="text" id="img-project" list="housing-projects" value="นนทวี" placeholder="เลือกหรือพิมพ์ชื่อโครงการ"
-                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm font-medium text-noantawee-900">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">Resolution ของภาพ (ขนาดพิกเซล / อัตราส่วน)</label>
-                            <input type="text" id="img-resolution" list="img-res-presets" placeholder="เช่น 1080 x 1080 px (1:1)" 
-                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm">
-                            <datalist id="img-res-presets">
-                                <option value="1080 x 1080 px (1:1 Post Square)">
-                                <option value="1080 x 1350 px (4:5 Portrait Feed)">
-                                <option value="1080 x 1920 px (9:16 Story / Reels Cover)">
-                                <option value="1920 x 1080 px (16:9 Banner / Cover)">
-                                <option value="อัลบั้มภาพ (1080 x 1080 px จำนวน 4-6 ภาพ)">
-                            </datalist>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">วันที่บรีฟ / ส่งงาน</label>
-                            <input type="date" id="img-date" 
-                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">สถานะงาน</label>
-                            <select id="img-status" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm bg-white">
-                                <option value="pending">Update Brief (กำลังทำ)</option>
-                                <option value="done">Job Done (เสร็จแล้ว)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. รายละเอียดบรีฟ + ฟุตเทจ + รีเฟอร์เร้น -->
-                <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-200 space-y-4">
-                    <div class="flex items-center gap-2.5 text-noantawee-900 border-b border-slate-100 pb-3">
-                        <div class="p-2 bg-noantawee-50 rounded-lg"><i data-lucide="file-text" class="w-5 h-5"></i></div>
-                        <h3 class="font-heading font-semibold text-base sm:text-lg">2. รายละเอียดบรีฟ ฟุตเทจ และรีเฟอร์เร้น</h3>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1.5">รายละเอียดบรีฟ (ข้อความในภาพ / Headline / Mood & Tone)</label>
-                            <textarea id="img-brief-detail" rows="5" placeholder="ระบุข้อความพาดหัว (Headline), รายละเอียดโปรโมชัน, โทนสีที่ต้องการ และองค์ประกอบในภาพ..." 
-                                      class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm leading-relaxed"></textarea>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1.5">ฟุตเทจ / ไฟล์ภาพประกอบ (ลิงก์ Drive หรือรายละเอียด)</label>
-                                <input type="text" id="img-footage" placeholder="https://drive.google.com/... หรือระบุโฟลเดอร์รูปบ้าน" 
-                                       class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1.5">รีเฟอร์เร้น (Reference Link / แนวทางภาพตัวอย่าง)</label>
-                                <input type="text" id="img-ref" placeholder="https://pinterest.com/... หรือลิงก์ตัวอย่างงาน" 
-                                       class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-noantawee-700 outline-none text-sm">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ปุ่มควบคุมด้านล่างของหน้าสร้างบรีฟ -->
-            <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-                <button type="button" id="btn-delete-in-editor" onclick="confirmDeleteCurrentBrief()" class="hidden inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    <span>ลบบรีฟนี้</span>
-                </button>
-                <div class="flex items-center gap-3 ml-auto">
-                    <button type="button" onclick="saveBriefAndGoHome()" class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-white hover:bg-slate-50 text-noantawee-900 border border-slate-300 font-heading font-medium text-sm rounded-xl transition-colors shadow-2xs">
-                        <i data-lucide="save" class="w-4 h-4"></i>
-                        <span>บันทึกกลับหน้าหลัก</span>
-                    </button>
-                    <button type="button" onclick="saveBriefAndOpenPDF()" class="inline-flex items-center gap-1.5 px-6 py-2.5 bg-noantawee-900 hover:bg-noantawee-800 text-white font-heading font-semibold text-sm rounded-xl transition-colors shadow-md">
-                        <i data-lucide="file-text" class="w-4 h-4"></i>
-                        <span>บันทึก & เปิดดูเอกสาร PDF</span>
-                    </button>
-                </div>
-            </div>
-
-        </div>
-    </section>
-
-    <!-- ===================================================================== -->
-    <!-- มุมมองที่ 3: หน้าพรีวิวเอกสาร PDF ในหน้าเว็บ (IN-PAGE PDF VIEWER)        -->
-    <!-- ===================================================================== -->
-    <section id="view-pdf" class="hidden min-h-screen bg-slate-800/95 text-slate-800 pb-16">
-        
-        <!-- แถบเครื่องมือด้านบนของหน้าอ่าน PDF (ไม่แสดงเวลาสั่งพิมพ์) -->
-        <header class="bg-noantawee-950 text-white sticky top-0 z-30 border-b border-white/10 shadow-lg no-print">
-            <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-                
-                <!-- ปุ่มกลับหน้าหลัก -->
-                <button onclick="goHome()" class="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-white hover:bg-white/10 px-3.5 py-2 rounded-xl border border-white/15 transition-colors">
-                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                    <span>กลับหน้าหลัก</span>
-                </button>
-
-                <!-- ปุ่มจัดการสถานะและเครื่องมือ -->
-                <div class="flex flex-wrap items-center gap-2">
-                    <!-- ปุ่มสลับสถานะ Update Brief <-> Job Done -->
-                    <button id="pdf-toggle-status-btn" onclick="toggleCurrentBriefStatus()" 
-                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-heading font-semibold transition-all shadow-sm bg-emerald-500 hover:bg-emerald-400 text-noantawee-950">
-                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-                        <span>ย้ายไป Job Done</span>
-                    </button>
-
-                    <!-- ปุ่มแก้ไขบรีฟ -->
-                    <button onclick="editCurrentBriefFromPDF()" 
-                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white/10 hover:bg-white/20 text-white transition-colors">
-                        <i data-lucide="edit-3" class="w-4 h-4"></i>
-                        <span>แก้ไข</span>
-                    </button>
-
-                    <!-- ปุ่มคัดลอกส่งแชท -->
-                    <button onclick="copyCurrentBriefText()" 
-                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white/10 hover:bg-white/20 text-white transition-colors">
-                        <i data-lucide="copy" class="w-4 h-4"></i>
-                        <span class="hidden sm:inline">คัดลอกข้อความ</span>
-                    </button>
-
-                    <!-- ปุ่ม Print / Save PDF (ทางเลือกเสริม ไม่บังคับโหลด) -->
-                    <button onclick="window.print()" 
-                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/30 transition-colors" title="พิมพ์หรือบันทึกเป็นไฟล์ PDF">
-                        <i data-lucide="printer" class="w-4 h-4"></i>
-                        <span class="hidden md:inline">พิมพ์ / เซฟ PDF</span>
-                    </button>
-                </div>
-            </div>
-        </header>
-
-        <!-- พื้นที่จำลองหน้ากระดาษเอกสาร PDF (A4 Document Sheet) -->
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
-            <div id="pdf-document-content" class="a4-document-sheet rounded-xl sm:rounded-2xl p-6 sm:p-10 md:p-12 space-y-7">
-                <!-- เนื้อหาเอกสารจะถูก Render ด้วย JavaScript -->
-            </div>
-        </div>
-    </section>
-
-    <script>
-        // =========================================================================
-        // 3. CUSTOM ASSETS (BG & LOGO MANAGEMENT)
-        // =========================================================================
-        function loadCustomAssets() {
-            const savedBg = localStorage.getItem(CUSTOM_BG_KEY);
-            if (savedBg) {
-                const bgImg = document.getElementById('bg-image');
-                bgImg.src = savedBg;
-                bgImg.classList.remove('hidden');
-                document.getElementById('bg-fallback-guide').classList.add('hidden');
-            }
-
-            const savedLogo = localStorage.getItem(CUSTOM_LOGO_KEY);
-            if (savedLogo) {
-                const logoImg = document.getElementById('logo-image');
-                logoImg.src = savedLogo;
-                document.getElementById('custom-logo-wrapper').classList.remove('hidden');
-                document.getElementById('logo-default-grid').classList.add('hidden');
-            }
-        }
-
-        function toggleAssetPanel() {
-            const panel = document.getElementById('asset-settings-panel');
-            panel.classList.toggle('hidden');
-        }
-
-        function previewLocalAsset(event, targetType) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const dataUrl = e.target.result;
-                try {
-                    if (targetType === 'bg') {
-                        localStorage.setItem(CUSTOM_BG_KEY, dataUrl);
-                        const bgImg = document.getElementById('bg-image');
-                        bgImg.src = dataUrl;
-                        bgImg.classList.remove('hidden');
-                        document.getElementById('bg-fallback-guide').classList.add('hidden');
-                        showToast('อัปเดตรูปพื้นหลัง 1920x1080 เรียบร้อยแล้ว');
-                    } else if (targetType === 'logo') {
-                        localStorage.setItem(CUSTOM_LOGO_KEY, dataUrl);
-                        const logoImg = document.getElementById('logo-image');
-                        logoImg.src = dataUrl;
-                        document.getElementById('custom-logo-wrapper').classList.remove('hidden');
-                        document.getElementById('logo-default-grid').classList.add('hidden');
-                        showToast('อัปเดตรูปโลโก้เรียบร้อยแล้ว');
-                    }
-                } catch (err) {
-                    showToast('ไฟล์รูปภาพมีขนาดใหญ่เกินไปสำหรับการจำในเบราว์เซอร์ แนะนำให้ย่อขนาดไฟล์ก่อนอัปโหลดทดสอบ', 'error');
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function resetCustomAssets() {
-            localStorage.removeItem(CUSTOM_BG_KEY);
-            localStorage.removeItem(CUSTOM_LOGO_KEY);
-            location.reload();
-        }
+        ];
 
         // =========================================================================
-        // 4. VIEW SWITCHING & HOME DASHBOARD RENDERING
+        // 3. INITIALIZATION & REAL-TIME FIRESTORE SYNC
         // =========================================================================
-        function switchView(viewName) {
-            document.getElementById('view-home').classList.add('hidden');
-            document.getElementById('view-editor').classList.add('hidden');
-            document.getElementById('view-pdf').classList.add('hidden');
-
-            document.getElementById(`view-${viewName}`).classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function goHome() {
-            renderHomeLists();
-            switchView('home');
-        }
-
-        // แสดงรายการ Update Brief และ Job Done บนหน้าแรกตามดีไซน์ต้นแบบ
-        function renderHomeLists() {
-            const pendingContainer = document.getElementById('list-update-brief');
-            const doneContainer = document.getElementById('list-job-done');
-
-            const pendingList = briefs.filter(b => b.status === 'pending');
-            const doneList = briefs.filter(b => b.status === 'done');
-
-            document.getElementById('pending-count').textContent = pendingList.length;
-            document.getElementById('done-count').textContent = doneList.length;
-
-            // Render Update Brief
-            if (pendingList.length === 0) {
-                pendingContainer.innerHTML = `<div class="text-white/50 text-xs py-2">ไม่มีงานค้างในระบบ</div>`;
-            } else {
-                pendingContainer.innerHTML = pendingList.map(item => createHomeRowHTML(item)).join('');
-            }
-
-            // Render Job Done
-            if (doneList.length === 0) {
-                doneContainer.innerHTML = `<div class="text-white/50 text-xs py-2">ยังไม่มีงานที่เสร็จแล้ว</div>`;
-            } else {
-                doneContainer.innerHTML = doneList.map(item => createHomeRowHTML(item)).join('');
-            }
-
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCustomAssets();
+            initFirestoreListener();
             lucide.createIcons();
+        });
+
+        function updateSyncStatus(text, colorClass) {
+            const dot = document.getElementById('firebase-sync-dot');
+            const label = document.getElementById('firebase-sync-text');
+            if (dot) dot.className = `w-2.5 h-2.5 rounded-full ${colorClass}`;
+            if (label) label.textContent = text;
         }
 
-        function createHomeRowHTML(item) {
-            const shortDate = formatShortDateSlash(item.date); // เช่น 11/12/26
-            const typeLabel = item.type === 'Image' ? 'Image' : 'Video';
-            return `
-                <div onclick="openPDFViewer('${item.id}')" 
-                     class="group flex items-center justify-between gap-2 py-1 px-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
-                     title="${escapeHTML(item.title)} (คลิกเพื่อเปิดดูเอกสารบรีฟ)">
-                    <div class="min-w-0 flex-1">
-                        <div class="text-white text-sm sm:text-[15px] font-light tracking-wide leading-snug">
-                            <span class="font-normal">${shortDate}</span> ${typeLabel}
-                        </div>
-                        <div class="text-white/65 text-[11px] truncate">
-                            ${escapeHTML(item.title)}
-                        </div>
-                    </div>
-                    <!-- ปุ่มเครื่องหมายบวก '+' สีขาว สำหรับเปิดดู PDF ในหน้าเว็บ -->
-                    <button type="button" 
-                            class="w-6 h-6 shrink-0 bg-white group-hover:bg-sky-300 text-noantawee-950 flex items-center justify-center rounded-[3px] shadow-xs transition-transform group-hover:scale-110"
-                            aria-label="เปิดดูเอกสารบรีฟ">
-                        <i data-lucide="plus" class="w-4 h-4 stroke-[3]"></i>
-                    </button>
-                </div>
-            `;
-        }
-
-        // =========================================================================
-        // 5. BRIEF EDITOR LOGIC (VIDEO & IMAGE TABS)
-        // =========================================================================
-        function setupTagButtons() {
-            // สร้างปุ่ม TOFU, MOFU, BOFU
-            const funnelContainer = document.getElementById('funnel-tags-container');
-            funnelContainer.innerHTML = FUNNEL_TAGS.map(tag => `
-                <button type="button" data-funnel="${tag}" onclick="toggleSelectPill(this, 'funnel')"
-                        class="funnel-pill px-3.5 py-1.5 rounded-full text-xs font-heading font-bold tracking-wider border transition-all bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100">
-                    ${tag}
-                </button>
-            `).join('');
-
-            // สร้างปุ่ม Mood & Tone
-            const moodContainer = document.getElementById('mood-tags-container');
-            moodContainer.innerHTML = MOOD_TAGS.map(mood => `
-                <button type="button" data-mood="${mood}" onclick="toggleSelectPill(this, 'mood')"
-                        class="mood-pill px-3 py-1.5 rounded-full text-xs font-medium border transition-all bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100">
-                    + ${mood}
-                </button>
-            `).join('');
-        }
-
-        function toggleSelectPill(btn, category) {
-            const isActive = btn.classList.toggle('active');
-            if (category === 'funnel') {
-                if (isActive) {
-                    btn.className = 'funnel-pill active px-3.5 py-1.5 rounded-full text-xs font-heading font-bold tracking-wider border transition-all bg-sky-500 text-noantawee-950 border-sky-500 shadow-xs';
-                } else {
-                    btn.className = 'funnel-pill px-3.5 py-1.5 rounded-full text-xs font-heading font-bold tracking-wider border transition-all bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100';
-                }
-            } else {
-                const label = btn.dataset.mood;
-                if (isActive) {
-                    btn.className = 'mood-pill active px-3 py-1.5 rounded-full text-xs font-medium border transition-all bg-noantawee-900 text-white border-noantawee-900 shadow-xs';
-                    btn.textContent = '✓ ' + label;
-                } else {
-                    btn.className = 'mood-pill px-3 py-1.5 rounded-full text-xs font-medium border transition-all bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100';
-                    btn.textContent = '+ ' + label;
-                }
-            }
-        }
-
-        function switchBriefTypeTab(type) {
-            currentEditorType = type;
-            const btnVideo = document.getElementById('tab-btn-video');
-            const btnImage = document.getElementById('tab-btn-image');
-            const formVideo = document.getElementById('form-video-container');
-            const formImage = document.getElementById('form-image-container');
-
-            if (type === 'Video') {
-                btnVideo.className = 'flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-heading font-semibold text-sm transition-all bg-noantawee-900 text-white shadow-sm';
-                btnImage.className = 'flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-heading font-semibold text-sm transition-all text-slate-600 hover:bg-slate-50';
-                formVideo.classList.remove('hidden');
-                formImage.classList.add('hidden');
-            } else {
-                btnImage.className = 'flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-heading font-semibold text-sm transition-all bg-noantawee-900 text-white shadow-sm';
-                btnVideo.className = 'flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-heading font-semibold text-sm transition-all text-slate-600 hover:bg-slate-50';
-                formImage.classList.remove('hidden');
-                formVideo.classList.add('hidden');
-            }
-        }
-
-        // เปิดหน้าสร้างบรีฟใหม่
-        function openEditorForNew() {
-            activeBriefId = null;
-            document.getElementById('editor-page-title').textContent = 'สร้างบรีฟงานใหม่';
-            document.getElementById('btn-delete-in-editor').classList.add('hidden');
-
-            const today = new Date().toISOString().split('T')[0];
-
-            // รีเซ็ตฟอร์ม Video (ตั้งชื่อโครงการเริ่มต้นเป็น 'นนทวี')
-            document.getElementById('vid-title').value = '';
-            document.getElementById('vid-project').value = 'นนทวี';
-            document.getElementById('vid-date').value = today;
-            document.getElementById('vid-status').value = 'pending';
-            document.getElementById('vid-duration').value = '30 - 60 วินาที (Short Video)';
-            document.getElementById('vid-ratio').value = '9:16 (แนวตั้ง - TikTok / Reels / Shorts)';
-            document.getElementById('vid-mood-custom').value = '';
-            document.getElementById('hook-time').value = '00:00 - 00:03';
-            document.getElementById('hook-visual').value = '';
-            document.getElementById('hook-audio').value = '';
-            document.getElementById('vid-footage').value = '';
-            document.getElementById('vid-ref').value = '';
-            document.getElementById('vid-notes').value = '';
-
-            // รีเซ็ตแท็ก
-            setupTagButtons();
-
-            // เริ่มต้นฉากที่ 1 และ ฉากที่ 2
-            renderVideoShots([
-                { timecode: '00:03 - 00:15', visual: '', audio: '' },
-                { timecode: '00:15 - 00:30', visual: '', audio: '' }
-            ]);
-
-            // รีเซ็ตฟอร์ม Image (ตั้งชื่อโครงการเริ่มต้นเป็น 'นนทวี')
-            document.getElementById('img-title').value = '';
-            document.getElementById('img-project').value = 'นนทวี';
-            document.getElementById('img-resolution').value = '1080 x 1080 px (1:1 Post Square)';
-            document.getElementById('img-date').value = today;
-            document.getElementById('img-status').value = 'pending';
-            document.getElementById('img-brief-detail').value = '';
-            document.getElementById('img-footage').value = '';
-            document.getElementById('img-ref').value = '';
-
-            switchBriefTypeTab('Video');
-            switchView('editor');
-        }
-
-        // เปิดหน้าแก้ไขบรีฟเดิม
-        function openEditorForExisting(id) {
-            const item = briefs.find(b => b.id === id);
-            if (!item) return;
-
-            activeBriefId = item.id;
-            document.getElementById('editor-page-title').textContent = 'แก้ไขบรีฟงาน';
-            document.getElementById('btn-delete-in-editor').classList.remove('hidden');
-
-            setupTagButtons();
-
-            if (item.type === 'Video') {
-                switchBriefTypeTab('Video');
-                document.getElementById('vid-title').value = item.title || '';
-                document.getElementById('vid-project').value = item.projectName || 'นนทวี';
-                document.getElementById('vid-date').value = item.date || '';
-                document.getElementById('vid-status').value = item.status || 'pending';
-                document.getElementById('vid-duration').value = item.duration || '';
-                document.getElementById('vid-ratio').value = item.ratio || '9:16 (แนวตั้ง - TikTok / Reels / Shorts)';
-                document.getElementById('vid-mood-custom').value = item.customMood || '';
-                
-                // เติม HOOK
-                document.getElementById('hook-time').value = item.hook?.timecode || '00:00 - 00:03';
-                document.getElementById('hook-visual').value = item.hook?.visual || '';
-                document.getElementById('hook-audio').value = item.hook?.audio || '';
-
-                // เติม Funnel Tags
-                (item.funnels || []).forEach(f => {
-                    const btn = document.querySelector(`.funnel-pill[data-funnel="${f}"]`);
-                    if (btn) toggleSelectPill(btn, 'funnel');
-                });
-
-                // เติม Mood Tags
-                (item.moods || []).forEach(m => {
-                    const btn = document.querySelector(`.mood-pill[data-mood="${m}"]`);
-                    if (btn) toggleSelectPill(btn, 'mood');
-                });
-
-                renderVideoShots(item.shots && item.shots.length > 0 ? item.shots : [{ timecode: '', visual: '', audio: '' }]);
-                document.getElementById('vid-footage').value = item.footage || '';
-                document.getElementById('vid-ref').value = item.reference || '';
-                document.getElementById('vid-notes').value = item.notes || '';
-            } else {
-                switchBriefTypeTab('Image');
-                document.getElementById('img-title').value = item.title || '';
-                document.getElementById('img-project').value = item.projectName || 'นนทวี';
-                document.getElementById('img-resolution').value = item.resolution || '';
-                document.getElementById('img-date').value = item.date || '';
-                document.getElementById('img-status').value = item.status || 'pending';
-                document.getElementById('img-brief-detail').value = item.briefDetail || '';
-                document.getElementById('img-footage').value = item.footage || '';
-                document.getElementById('img-ref').value = item.reference || '';
-            }
-
-            switchView('editor');
-        }
-
-        // Render ฉากที่ 1, 2, 3... (ต่อจาก HOOK)
-        function renderVideoShots(shotsArray) {
-            const container = document.getElementById('video-shots-container');
-            container.innerHTML = shotsArray.map((shot, idx) => createShotRowHTML(shot, idx + 1)).join('');
-            lucide.createIcons();
-        }
-
-        function createShotRowHTML(shot, sceneNum) {
-            return `
-                <div class="vid-shot-row bg-slate-50 p-3.5 rounded-xl border border-slate-200 relative group hover:border-noantawee-700/40 transition-colors">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-heading font-semibold text-noantawee-900 bg-noantawee-100 px-2.5 py-0.5 rounded-md">
-                            ฉากที่ <span class="scene-index">${sceneNum}</span>
-                        </span>
-                        <button type="button" onclick="removeVideoShotRow(this)" class="text-slate-400 hover:text-red-500 p-1 rounded-lg transition-colors" title="ลบฉากนี้">
-                            <i data-lucide="x" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-                        <div class="md:col-span-3">
-                            <label class="block text-[11px] font-medium text-slate-500 mb-1">ช่วงเวลา (Timecode)</label>
-                            <input type="text" value="${escapeHTML(shot.timecode)}" placeholder="เช่น 00:03 - 00:15"
-                                   class="shot-time w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs focus:border-noantawee-700 outline-none">
-                        </div>
-                        <div class="md:col-span-5">
-                            <label class="block text-[11px] font-medium text-slate-500 mb-1">รายละเอียดภาพ / มุมกล้อง (Visual)</label>
-                            <textarea rows="2" placeholder="อธิบายภาพที่เห็นในฉากนี้..."
-                                      class="shot-visual w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs focus:border-noantawee-700 outline-none">${escapeHTML(shot.visual)}</textarea>
-                        </div>
-                        <div class="md:col-span-4">
-                            <label class="block text-[11px] font-medium text-slate-500 mb-1">เสียงพากย์ / ข้อความขึ้นจอ (Audio & Text)</label>
-                            <textarea rows="2" placeholder="บทพูด, ข้อความ Subtitle, Sound Effect..."
-                                      class="shot-audio w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs focus:border-noantawee-700 outline-none">${escapeHTML(shot.audio)}</textarea>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function addVideoShotRow() {
-            const container = document.getElementById('video-shots-container');
-            const nextNum = container.querySelectorAll('.vid-shot-row').length + 1;
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = createShotRowHTML({ timecode: '', visual: '', audio: '' }, nextNum);
-            container.appendChild(wrapper.firstElementChild);
-            lucide.createIcons();
-        }
-
-        function removeVideoShotRow(btn) {
-            const container = document.getElementById('video-shots-container');
-            if (container.querySelectorAll('.vid-shot-row').length <= 1) {
-                showToast('ต้องมีอย่างน้อย 1 ฉากถัดจาก HOOK', 'info');
-                return;
-            }
-            btn.closest('.vid-shot-row').remove();
-            container.querySelectorAll('.scene-index').forEach((el, idx) => {
-                el.textContent = idx + 1;
-            });
-        }
-
-        // รวบรวมข้อมูลและบันทึกลง LocalStorage
-        function collectAndSaveForm() {
-            const id = activeBriefId || ('ntw-' + Date.now());
-            let briefObj = null;
-
-            if (currentEditorType === 'Video') {
-                const title = document.getElementById('vid-title').value.trim() || 'โปรเจกต์วิดีโอไม่มีชื่อ';
-                const funnels = Array.from(document.querySelectorAll('.funnel-pill.active')).map(b => b.dataset.funnel);
-                const moods = Array.from(document.querySelectorAll('.mood-pill.active')).map(b => b.dataset.mood);
-                const shots = Array.from(document.querySelectorAll('.vid-shot-row')).map(row => ({
-                    timecode: row.querySelector('.shot-time').value.trim(),
-                    visual: row.querySelector('.shot-visual').value.trim(),
-                    audio: row.querySelector('.shot-audio').value.trim()
-                }));
-
-                briefObj = {
-                    id,
-                    type: 'Video',
-                    title,
-                    projectName: document.getElementById('vid-project').value.trim() || 'นนทวี',
-                    date: document.getElementById('vid-date').value || new Date().toISOString().split('T')[0],
-                    status: document.getElementById('vid-status').value,
-                    duration: document.getElementById('vid-duration').value.trim(),
-                    ratio: document.getElementById('vid-ratio').value,
-                    funnels,
-                    moods,
-                    customMood: document.getElementById('vid-mood-custom').value.trim(),
-                    hook: {
-                        timecode: document.getElementById('hook-time').value.trim(),
-                        visual: document.getElementById('hook-visual').value.trim(),
-                        audio: document.getElementById('hook-audio').value.trim()
-                    },
-                    shots,
-                    footage: document.getElementById('vid-footage').value.trim(),
-                    reference: document.getElementById('vid-ref').value.trim(),
-                    notes: document.getElementById('vid-notes').value.trim()
-                };
-            } else {
-                const title = document.getElementById('img-title').value.trim() || 'โปรเจกต์ภาพนิ่งไม่มีชื่อ';
-                briefObj = {
-                    id,
-                    type: 'Image',
-                    title,
-                    projectName: document.getElementById('img-project').value.trim() || 'นนทวี',
-                    resolution: document.getElementById('img-resolution').value.trim(),
-                    date: document.getElementById('img-date').value || new Date().toISOString().split('T')[0],
-                    status: document.getElementById('img-status').value,
-                    briefDetail: document.getElementById('img-brief-detail').value.trim(),
-                    footage: document.getElementById('img-footage').value.trim(),
-                    reference: document.getElementById('img-ref').value.trim()
-                };
-            }
-
-            const existingIndex = briefs.findIndex(b => b.id === id);
-            if (existingIndex !== -1) {
-                briefs[existingIndex] = briefObj;
-            } else {
-                briefs.unshift(briefObj);
-            }
-
-            activeBriefId = id;
-            saveBriefsToStorage();
-            return briefObj;
-        }
-
-        function saveBriefAndGoHome() {
-            const saved = collectAndSaveForm();
-            showToast(`บันทึกบรีฟ "${saved.title}" เรียบร้อยแล้ว`);
-            goHome();
-        }
-
-        function saveBriefAndOpenPDF() {
-            const saved = collectAndSaveForm();
-            showToast(`บันทึกบรีฟเรียบร้อย กำลังเปิดหน้าเอกสาร...`);
-            openPDFViewer(saved.id);
-        }
-
-        function confirmDeleteCurrentBrief() {
-            if (!activeBriefId) return;
-            const item = briefs.find(b => b.id === activeBriefId);
-            if (!item) return;
-
-            const modal = document.getElementById('confirm-modal');
-            document.getElementById('confirm-message').textContent = `ต้องการลบบรีฟ "${item.title}" ออกจากระบบใช่หรือไม่?`;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-
-            document.getElementById('confirm-cancel-btn').onclick = () => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            };
-
-            document.getElementById('confirm-ok-btn').onclick = () => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                briefs = briefs.filter(b => b.id !== activeBriefId);
-                saveBriefsToStorage();
-                showToast('ลบบรีฟเรียบร้อยแล้ว');
-                goHome();
-            };
-        }
-
-        // =========================================================================
-        // 6. IN-PAGE PDF DOCUMENT VIEWER
-        // =========================================================================
-        function openPDFViewer(id) {
-            const item = briefs.find(b => b.id === id);
-            if (!item) return;
-
-            activeBriefId = item.id;
-            updatePDFStatusButton(item.status);
-
-            const container = document.getElementById('pdf-document-content');
-
-            if (item.type === 'Video') {
-                container.innerHTML = renderVideoPDFTemplate(item);
-            } else {
-                container.innerHTML = renderImagePDFTemplate(item);
-            }
-
-            switchView('pdf');
-            lucide.createIcons();
-        }
-
-        function updatePDFStatusButton(status) {
-            const btn = document.getElementById('pdf-toggle-status-btn');
-            if (status === 'pending') {
-                btn.className = 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-heading font-semibold transition-all shadow-sm bg-emerald-400 hover:bg-emerald-300 text-noantawee-950';
-                btn.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4"></i><span>ย้ายไป Job Done</span>`;
-            } else {
-                btn.className = 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-heading font-semibold transition-all shadow-sm bg-amber-400 hover:bg-amber-300 text-noantawee-950';
-                btn.innerHTML = `<i data-lucide="rotate-ccw" class="w-4 h-4"></i><span>ส่งกลับ Update Brief</span>`;
-            }
-        }
-
-        function toggleCurrentBriefStatus() {
-            const item = briefs.find(b => b.id === activeBriefId);
-            if (!item) return;
-
-            item.status = item.status === 'pending' ? 'done' : 'pending';
-            saveBriefsToStorage();
-            openPDFViewer(item.id);
-            showToast(item.status === 'done' ? 'อัปเดตสถานะเป็น Job Done แล้ว!' : 'ย้ายกลับไปรายการ Update Brief แล้ว');
-        }
-
-        function editCurrentBriefFromPDF() {
-            if (activeBriefId) {
-                openEditorForExisting(activeBriefId);
-            }
-        }
-
-        // เทมเพลตหน้ากระดาษเอกสารบรีฟวิดีโอ (Video Brief PDF View)
-        function renderVideoPDFTemplate(d) {
-            const statusBadge = d.status === 'done'
-                ? `<span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">✓ JOB DONE</span>`
-                : `<span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">● UPDATE BRIEF</span>`;
-
-            const validShots = (d.shots || []).filter(s => s.timecode || s.visual || s.audio);
-
-            return `
-                <!-- หัวเอกสาร -->
-                <div class="border-b-2 border-noantawee-900 pb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="px-2.5 py-1 bg-noantawee-900 text-white text-[11px] font-heading font-semibold tracking-widest uppercase rounded-md">
-                                VIDEO BRIEF
-                            </span>
-                            ${statusBadge}
-                        </div>
-                        <h1 class="text-2xl sm:text-3xl font-heading font-bold text-noantawee-950 leading-snug">
-                            ${escapeHTML(d.title)}
-                        </h1>
-                        <p class="text-slate-600 text-sm sm:text-base mt-1 font-medium">
-                            โครงการบ้าน: <span class="text-noantawee-900 font-semibold">${escapeHTML(d.projectName || 'นนทวี')}</span>
-                        </p>
-                    </div>
-                    <div class="sm:text-right bg-noantawee-50 px-4 py-3 rounded-xl border border-noantawee-100 shrink-0">
-                        <div class="text-[11px] text-slate-500 uppercase tracking-wider">วันที่บรีฟ / กำหนดส่ง</div>
-                        <div class="text-base sm:text-lg font-heading font-bold text-noantawee-900">
-                            ${formatThaiFullDate(d.date)}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- สเปกวิดีโอ & Funnel -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 print-avoid-break">
-                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                        <div class="text-xs text-slate-500 mb-1">ความยาวโดยประมาณ</div>
-                        <div class="font-heading font-semibold text-noantawee-900 text-sm">${escapeHTML(d.duration || '-')}</div>
-                    </div>
-                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                        <div class="text-xs text-slate-500 mb-1">อัตราส่วนภาพ (Aspect Ratio)</div>
-                        <div class="font-heading font-semibold text-noantawee-900 text-sm">${escapeHTML(d.ratio || '-')}</div>
-                    </div>
-                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                        <div class="text-xs text-slate-500 mb-1">Funnel Stage</div>
-                        <div class="flex flex-wrap gap-1.5 mt-0.5">
-                            ${(d.funnels && d.funnels.length > 0) 
-                                ? d.funnels.map(f => `<span class="px-2.5 py-0.5 bg-noantawee-900 text-white rounded-md text-xs font-bold">${escapeHTML(f)}</span>`).join('')
-                                : '<span class="text-sm text-slate-400">-</span>'}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- สไตล์และอารมณ์ -->
-                <div class="print-avoid-break">
-                    <h3 class="font-heading font-semibold text-noantawee-900 text-base mb-2 flex items-center gap-2">
-                        <span class="w-1.5 h-5 bg-noantawee-900 rounded-full"></span>
-                        สไตล์และอารมณ์ (Mood & Tone)
-                    </h3>
-                    <div class="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
-                        ${(d.moods && d.moods.length > 0) 
-                            ? `<div class="flex flex-wrap gap-2">${d.moods.map(m => `<span class="px-3 py-1 bg-noantawee-100 text-noantawee-900 rounded-full text-xs font-medium">${escapeHTML(m)}</span>`).join('')}</div>` 
-                            : ''}
-                        <p class="text-sm text-slate-700 leading-relaxed">
-                            ${escapeHTML(d.customMood || (d.moods?.length ? '' : 'ไม่ได้ระบุรายละเอียดสไตล์เพิ่มเติม'))}
-                        </p>
-                    </div>
-                </div>
-
-                <!-- ตาราง HOOK และ ลำดับฉาก 1, 2, 3 -->
-                <div>
-                    <h3 class="font-heading font-semibold text-noantawee-900 text-base mb-3 flex items-center gap-2">
-                        <span class="w-1.5 h-5 bg-noantawee-900 rounded-full"></span>
-                        ลำดับภาพและบทพูด (HOOK & Storyboard)
-                    </h3>
-                    <div class="overflow-x-auto border border-slate-300 rounded-xl">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-noantawee-900 text-white text-xs font-heading">
-                                    <th class="py-3 px-4 w-24">ลำดับ</th>
-                                    <th class="py-3 px-4 w-28">ช่วงเวลา</th>
-                                    <th class="py-3 px-4">รายละเอียดภาพ (Visual)</th>
-                                    <th class="py-3 px-4">เสียงพากย์ / ข้อความขึ้นจอ (Audio & Text)</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-200 text-sm">
-                                <!-- แถว HOOK เด่นชัด -->
-                                <tr class="bg-amber-50/90 print-avoid-break">
-                                    <td class="py-3.5 px-4 align-top">
-                                        <span class="inline-block px-2.5 py-1 bg-amber-300 text-amber-950 font-heading font-bold text-xs rounded-md">
-                                            HOOK
-                                        </span>
-                                    </td>
-                                    <td class="py-3.5 px-4 font-mono text-xs font-semibold text-amber-950 align-top whitespace-nowrap">
-                                        ${escapeHTML(d.hook?.timecode || '00:00 - 00:03')}
-                                    </td>
-                                    <td class="py-3.5 px-4 text-slate-900 font-medium align-top whitespace-pre-line leading-relaxed">
-                                        ${escapeHTML(d.hook?.visual || '-')}
-                                    </td>
-                                    <td class="py-3.5 px-4 text-slate-800 align-top whitespace-pre-line leading-relaxed">
-                                        ${escapeHTML(d.hook?.audio || '-')}
-                                    </td>
-                                </tr>
-
-                                <!-- แถวฉากที่ 1, 2, 3... -->
-                                ${validShots.map((s, idx) => `
-                                    <tr class="hover:bg-slate-50 print-avoid-break">
-                                        <td class="py-3.5 px-4 font-heading font-semibold text-noantawee-900 text-xs align-top">
-                                            ฉากที่ ${idx + 1}
-                                        </td>
-                                        <td class="py-3.5 px-4 font-mono text-xs text-slate-600 align-top whitespace-nowrap">
-                                            ${escapeHTML(s.timecode || '-')}
-                                        </td>
-                                        <td class="py-3.5 px-4 text-slate-800 align-top whitespace-pre-line leading-relaxed">
-                                            ${escapeHTML(s.visual || '-')}
-                                        </td>
-                                        <td class="py-3.5 px-4 text-slate-700 align-top whitespace-pre-line leading-relaxed">
-                                            ${escapeHTML(s.audio || '-')}
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- ฟุตเทจ รีเฟอร์เร้น และหมายเหตุ -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 print-avoid-break">
-                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
-                        <h4 class="font-heading font-semibold text-sm text-noantawee-900">ฟุตเทจและรีเฟอร์เร้น (Assets & Ref)</h4>
-                        <div class="text-xs space-y-2">
-                            <div>
-                                <span class="text-slate-500 block">ลิงก์ฟุตเทจ / โลโก้:</span>
-                                ${formatLinkOrText(d.footage)}
-                            </div>
-                            <div>
-                                <span class="text-slate-500 block">ตัวอย่างงาน (Reference):</span>
-                                ${formatLinkOrText(d.reference)}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                        <h4 class="font-heading font-semibold text-sm text-noantawee-900">หมายเหตุเพิ่มเติม (Notes)</h4>
-                        <p class="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
-                            ${escapeHTML(d.notes || 'ไม่มีหมายเหตุเพิ่มเติม')}
-                        </p>
-                    </div>
-                </div>
-            `;
-        }
-
-        // เทมเพลตหน้ากระดาษเอกสารบรีฟภาพนิ่ง (Image Brief PDF View)
-        function renderImagePDFTemplate(d) {
-            const statusBadge = d.status === 'done'
-                ? `<span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">✓ JOB DONE</span>`
-                : `<span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">● UPDATE BRIEF</span>`;
-
-            return `
-                <!-- หัวเอกสาร -->
-                <div class="border-b-2 border-noantawee-900 pb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="px-2.5 py-1 bg-sky-700 text-white text-[11px] font-heading font-semibold tracking-widest uppercase rounded-md">
-                                IMAGE BRIEF
-                            </span>
-                            ${statusBadge}
-                        </div>
-                        <h1 class="text-2xl sm:text-3xl font-heading font-bold text-noantawee-950 leading-snug">
-                            ${escapeHTML(d.title)}
-                        </h1>
-                        <p class="text-slate-600 text-sm sm:text-base mt-1 font-medium">
-                            โครงการบ้าน: <span class="text-noantawee-900 font-semibold">${escapeHTML(d.projectName || 'นนทวี')}</span>
-                        </p>
-                    </div>
-                    <div class="sm:text-right bg-noantawee-50 px-4 py-3 rounded-xl border border-noantawee-100 shrink-0">
-                        <div class="text-[11px] text-slate-500 uppercase tracking-wider">วันที่บรีฟ / กำหนดส่ง</div>
-                        <div class="text-base sm:text-lg font-heading font-bold text-noantawee-900">
-                            ${formatThaiFullDate(d.date)}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- สเปกขนาดภาพ (Resolution) -->
-                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between print-avoid-break">
-                    <div>
-                        <div class="text-xs text-slate-500 mb-0.5">Resolution / ขนาดภาพที่ต้องการ</div>
-                        <div class="font-heading font-bold text-noantawee-900 text-base sm:text-lg">
-                            ${escapeHTML(d.resolution || 'ไม่ได้ระบุขนาด')}
-                        </div>
-                    </div>
-                    <div class="p-2.5 bg-white rounded-xl border border-slate-200 text-noantawee-900">
-                        <i data-lucide="maximize-2" class="w-5 h-5"></i>
-                    </div>
-                </div>
-
-                <!-- รายละเอียดบรีฟภาพ -->
-                <div class="print-avoid-break">
-                    <h3 class="font-heading font-semibold text-noantawee-900 text-base mb-2.5 flex items-center gap-2">
-                        <span class="w-1.5 h-5 bg-noantawee-900 rounded-full"></span>
-                        รายละเอียดบรีฟและข้อความในภาพ (Brief Details)
-                    </h3>
-                    <div class="p-5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 whitespace-pre-line leading-relaxed min-h-[140px]">
-                        ${escapeHTML(d.briefDetail || 'ไม่ได้ระบุรายละเอียดบรีฟ')}
-                    </div>
-                </div>
-
-                <!-- ฟุตเทจและรีเฟอร์เร้น -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 print-avoid-break">
-                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                        <h4 class="font-heading font-semibold text-sm text-noantawee-900">ฟุตเทจ / ไฟล์ภาพประกอบ (Footage)</h4>
-                        <div class="text-xs leading-relaxed">
-                            ${formatLinkOrText(d.footage)}
-                        </div>
-                    </div>
-
-                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                        <h4 class="font-heading font-semibold text-sm text-noantawee-900">รีเฟอร์เร้น (Reference)</h4>
-                        <div class="text-xs leading-relaxed">
-                            ${formatLinkOrText(d.reference)}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // คัดลอกข้อความบรีฟส่ง Line / แชท
-        function copyCurrentBriefText() {
-            const d = briefs.find(b => b.id === activeBriefId);
-            if (!d) return;
-
-            let text = `📌 *NOANTAWEE SOCIAL BRIEF (${d.type.toUpperCase()})*\n`;
-            text += `• หัวข้องาน: ${d.title}\n`;
-            text += `• โครงการ: ${d.projectName || 'นนทวี'}\n`;
-            text += `• วันที่: ${formatThaiFullDate(d.date)}\n`;
-
-            if (d.type === 'Video') {
-                text += `• ความยาว: ${d.duration || '-'} | อัตราส่วน: ${d.ratio || '-'}\n`;
-                if (d.funnels?.length) text += `• Funnel: ${d.funnels.join(', ')}\n`;
-                if (d.moods?.length || d.customMood) text += `• Mood & Tone: ${[...(d.moods || []), d.customMood].filter(Boolean).join(', ')}\n`;
-                
-                text += `\n⚡ *[HOOK] (${d.hook?.timecode || '00:00 - 00:03'})*\n`;
-                if (d.hook?.visual) text += `   - ภาพ: ${d.hook.visual}\n`;
-                if (d.hook?.audio) text += `   - เสียง/ข้อความ: ${d.hook.audio}\n`;
-
-                const validShots = (d.shots || []).filter(s => s.timecode || s.visual || s.audio);
-                if (validShots.length > 0) {
-                    text += `\n🎬 *ลำดับฉาก*\n`;
-                    validShots.forEach((s, i) => {
-                        text += `ฉากที่ ${i + 1} [${s.timecode || '-'}]\n`;
-                        if (s.visual) text += `   - ภาพ: ${s.visual}\n`;
-                        if (s.audio) text += `   - เสียง/ข้อความ: ${s.audio}\n`;
-                    });
-                }
-            } else {
-                text += `• ขนาดภาพ (Resolution): ${d.resolution || '-'}\n`;
-                text += `\n📝 *รายละเอียดบรีฟ:*\n${d.briefDetail || '-'}\n`;
-            }
-
-            if (d.footage) text += `\n📂 ฟุตเทจ: ${d.footage}\n`;
-            if (d.reference) text += `🔗 รีเฟอร์เร้น: ${d.reference}\n`;
-            if (d.notes) text += `💡 หมายเหตุ: ${d.notes}\n`;
-
-            const ta = document.createElement('textarea');
-            ta.value = text;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
+        function initFirestoreListener() {
             try {
-                document.execCommand('copy');
-                showToast('คัดลอกข้อความบรีฟเรียบร้อย นำไปวางใน Line ได้เลย!');
+                const q = query(collection(db, BRIEFS_COLLECTION), orderBy("createdAt", "desc"));
+                onSnapshot(q, (snapshot) => {
+                    isFirebaseReady = true;
+                    briefs = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+                    updateSyncStatus("เชื่อมต่อฐานข้อมูลออนไลน์แล้ว (ซิงก์ทุกเครื่อง)", "bg-emerald-400");
+                    renderHomeLists();
+
+                    // หากกำลังเปิดดู PDF ของบรีฟใดอยู่ ให้รีเฟรชข้อมูลอัตโนมัติ
+                    if (activeBriefId && !document.getElementById('page-pdf-viewer').classList.contains('hidden')) {
+                        renderPdfPreview(activeBriefId);
+                    }
+                }, (error) => {
+                    console.error("Firestore error:", error);
+                    updateSyncStatus("รอเปิดใช้งาน Firestore Database (ใช้โหมดสำรองชั่วคราว)", "bg-rose-400");
+                    loadBriefsFromLocalFallback();
+                });
             } catch (e) {
-                showToast('ไม่สามารถคัดลอกข้อความได้', 'error');
+                console.error("Firebase init error:", e);
+                loadBriefsFromLocalFallback();
             }
-            document.body.removeChild(ta);
         }
 
-        // Export JSON สำรองข้อมูลทั้งหมด
-        function exportAllJSON() {
-            const dataStr = JSON.stringify(briefs, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `noantawee-briefs-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('ดาวน์โหลดไฟล์สำรองข้อมูล JSON เรียบร้อย');
-        }
-
-        // =========================================================================
-        // 7. HELPER FUNCTIONS
-        // =========================================================================
-        function escapeHTML(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-
-        function formatLinkOrText(val) {
-            if (!val) return '<span class="text-slate-400">-</span>';
-            if (val.startsWith('http://') || val.startsWith('https://')) {
-                return `<a href="${escapeHTML(val)}" target="_blank" class="text-sky-700 underline break-all font-medium">${escapeHTML(val)}</a>`;
+        function loadBriefsFromLocalFallback() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                briefs = raw ? JSON.parse(raw) : [...DEFAULT_SAMPLE_BRIEFS];
+            } catch (e) {
+                briefs = [...DEFAULT_SAMPLE_BRIEFS];
             }
-            return `<span class="text-slate-700 whitespace-pre-line">${escapeHTML(val)}</span>`;
+            renderHomeLists();
         }
 
-        // แปลงวันที่เป็นรูปแบบ วว/ดด/ปป (เช่น 11/12/26) ตามภาพต้นแบบ
-        function formatShortDateSlash(dateStr) {
-            if (!dateStr) return '--/--/--';
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-                const yy = parts[0].slice(-2);
-                const mm = parts[1];
-                const dd = parts[2];
-                return `${dd}/${mm}/${yy}`;
+        async function saveBriefToCloud(briefObj) {
+            if (isFirebaseReady) {
+                try {
+                    const docRef = doc(db, BRIEFS_COLLECTION, briefObj.id);
+                    await setDoc(docRef, briefObj);
+                } catch (e) {
+                    console.error("Save error:", e);
+                    showToast('บันทึกขึ้น Cloud ไม่สำเร็จ ตรวจสอบสิทธิ์ Firestore Rules', 'error');
+                }
+            } else {
+                const idx = briefs.findIndex(b => b.id === briefObj.id);
+                if (idx > -1) briefs[idx] = briefObj;
+                else briefs.unshift(briefObj);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(briefs));
+                renderHomeLists();
             }
-            return dateStr;
         }
 
-        function formatThaiFullDate(dateStr) {
-            if (!dateStr) return 'ไม่ระบุวันที่';
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return dateStr;
-            return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+        async function deleteBriefFromCloud(id) {
+            if (isFirebaseReady) {
+                try {
+                    await deleteDoc(doc(db, BRIEFS_COLLECTION, id));
+                } catch (e) {
+                    console.error("Delete error:", e);
+                    showToast('ลบข้อมูลไม่สำเร็จ', 'error');
+                }
+            } else {
+                briefs = briefs.filter(b => b.id !== id);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(briefs));
+                renderHomeLists();
+            }
         }
-
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            const bgClass = type === 'error' ? 'bg-red-600' : 'bg-noantawee-950 border border-white/15';
-            toast.className = `${bgClass} text-white px-4 py-3 rounded-xl shadow-xl text-xs sm:text-sm font-medium flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-2`;
-            toast.innerHTML = `<i data-lucide="info" class="w-4 h-4 text-sky-300 shrink-0"></i><span>${escapeHTML(message)}</span>`;
-            container.appendChild(toast);
-            lucide.createIcons();
-
-            requestAnimationFrame(() => {
-                toast.classList.remove('opacity-0', 'translate-y-2');
-            });
-
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-    </script>
-</body>
-</html>
+<!-- ... existing code ... -->
