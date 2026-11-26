@@ -152,15 +152,15 @@
     <!-- ===================================================================== -->
     <section id="view-home" class="relative min-h-screen w-full overflow-hidden hero-navy-backdrop">
         
-        <!-- 1. รูปภาพพื้นหลัง 1920x1080 เต็มจอ (มีภาพบ้านอยู่ฝั่งซ้ายในตัวไฟล์ bg.jpg แล้ว) -->
+        <!-- 1. รูปภาพพื้นหลัง 1920x1080 เต็มจอ (มีภาพบ้านอยู่ฝั่งซ้ายในตัวไฟล์ bg.png แล้ว) -->
         <div class="absolute inset-0 z-0 pointer-events-none">
             <img id="bg-image" 
-                 src="bg.jpg" 
+                 src="bg.png" 
                  alt="Noantawee Background 1920x1080" 
                  onerror="this.classList.add('hidden'); document.getElementById('bg-fallback-guide').classList.remove('hidden');"
                  class="w-full h-full object-cover object-left lg:object-center">
             
-            <!-- แสดงกราฟิกพื้นหลังโทนสีน้ำเงินฝั่งซ้ายกรณีที่ยังไม่ได้อัปโหลดไฟล์ bg.jpg -->
+            <!-- แสดงกราฟิกพื้นหลังโทนสีน้ำเงินฝั่งซ้ายกรณีที่ยังไม่ได้อัปโหลดไฟล์ bg.png -->
             <div id="bg-fallback-guide" class="hidden w-full h-full relative">
                 <div class="house-radial-glow absolute top-1/2 left-[26%] -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] sm:w-[540px] sm:h-[540px] rounded-full"></div>
             </div>
@@ -170,7 +170,7 @@
         <div class="relative z-10 w-full min-h-screen grid grid-cols-1 lg:grid-cols-2">
             
             <!-- ========================================================= -->
-            <!-- ฝั่งซ้าย (50%): ปล่อยโล่งทั้งหมดเพื่อให้เห็นภาพบ้านบน bg.jpg เต็มตา -->
+            <!-- ฝั่งซ้าย (50%): ปล่อยโล่งทั้งหมดเพื่อให้เห็นภาพบ้านบน bg.png เต็มตา -->
             <!-- ========================================================= -->
             <div class="hidden lg:block w-full h-full pointer-events-none"></div>
 
@@ -283,7 +283,7 @@
                 <div>
                     <label class="block font-medium text-slate-700 mb-1">1. รูปพื้นหลังบ้าน 1920x1080 (Background)</label>
                     <input type="file" accept="image/*" onchange="previewLocalAsset(event, 'bg')" class="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-noantawee-100 file:text-noantawee-900 hover:file:bg-noantawee-200 cursor-pointer">
-                    <p class="text-[10px] text-slate-400 mt-0.5">*บนโฮสต์จริงให้ตั้งชื่อไฟล์ว่า <b>bg.jpg</b></p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">*บนโฮสต์จริงให้ตั้งชื่อไฟล์ว่า <b>bg.png</b></p>
                 </div>
                 <div>
                     <label class="block font-medium text-slate-700 mb-1">2. รูปโลโก้หัวข้อฝั่งขวา (Logo)</label>
